@@ -1,10 +1,11 @@
 import axios from 'axios';
+import SecureStorage from '../utils/secureStorage';
 
 const BASE_URL = 'https://api.spotify.com/v1';
 
-// Get token from localStorage
+// Get token from secure storage
 const getToken = () => {
-  return localStorage.getItem('spotify_access_token');
+  return SecureStorage.getItem('access_token');
 };
 
 // Create axios instance with auth
@@ -31,8 +32,9 @@ spotifyApi.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       // Token expired, clear storage and redirect to login
-      localStorage.removeItem('spotify_access_token');
-      localStorage.removeItem('spotify_token_expires');
+      SecureStorage.removeItem('access_token');
+      SecureStorage.removeItem('token_expires');
+      SecureStorage.removeItem('user_data');
       window.location.href = '/';
     }
     return Promise.reject(error);

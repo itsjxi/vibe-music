@@ -1,10 +1,12 @@
+import SecureStorage from '../utils/secureStorage';
+
 // Music App OAuth Configuration (Authorization Code Flow with PKCE)
 const CLIENT_ID = import.meta.env.VITE_SPOTIFY_CLIENT_ID;
 const getRedirectUri = () => {
   const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
   const prodUrl = import.meta.env.VITE_PROD_URL || 'https://vibes-stream.netlify.app';
   return isDevelopment 
-    ? 'https://localhost:5173/callback'
+    ? 'http://127.0.0.1:5173/callback'
     : `${prodUrl}/callback`;
 };
 const SCOPES = [
@@ -53,8 +55,8 @@ export const redirectToSpotifyAuth = async () => {
   const codeChallenge = await generateCodeChallenge(codeVerifier);
   const redirectUri = getRedirectUri();
   
-  localStorage.setItem('auth_state', state);
-  localStorage.setItem('code_verifier', codeVerifier);
+  SecureStorage.setItem('auth_state', state, 10 * 60 * 1000); // 10 min expiry
+  SecureStorage.setItem('code_verifier', codeVerifier, 10 * 60 * 1000);
   
   const params = {
     response_type: 'code',
@@ -76,7 +78,7 @@ export const redirectToSpotifyAuth = async () => {
 
 // Exchange authorization code for access token
 export const exchangeCodeForToken = async (code) => {
-  const codeVerifier = localStorage.getItem('code_verifier');
+  const codeVerifier = SecureStorage.getItem('code_verifier');
   const redirectUri = getRedirectUri();
   
   const response = await fetch('https://accounts.spotify.com/api/token', {
@@ -94,16 +96,19 @@ export const exchangeCodeForToken = async (code) => {
   });
   
   if (!response.ok) {
-    throw new Error('Failed to exchange code for token');
+    const errorData = await response.json();
+    console.error('Token exchange failed');
+    throw new Error(errorData.error_description || 'Failed to exchange code for token');
   }
   
   const data = await response.json();
   
-  localStorage.setItem('access_token', data.access_token);
-  localStorage.setItem('refresh_token', data.refresh_token);
-  localStorage.setItem('token_expires', Date.now() + (data.expires_in * 1000));
-  localStorage.removeItem('auth_state');
-  localStorage.removeItem('code_verifier');
+  const ONE_HOUR = 60 * 60 * 1000;
+  SecureStorage.setItem('access_token', data.access_token, data.expires_in * 1000);
+  SecureStorage.setItem('refresh_token', data.refresh_token, 60 * 24 * ONE_HOUR); // 60 days
+  SecureStorage.setItem('token_expires', Date.now() + (data.expires_in * 1000));
+  SecureStorage.removeItem('auth_state');
+  SecureStorage.removeItem('code_verifier');
   
   return data;
 };
@@ -120,7 +125,7 @@ export const parseCodeFromUrl = () => {
     throw new Error(error);
   }
   
-  const storedState = localStorage.getItem('auth_state');
+  const storedState = SecureStorage.getItem('auth_state');
   if (state !== storedState) {
     throw new Error('State mismatch error');
   }
@@ -145,8 +150,8 @@ export const getSpotifyUserProfile = async (accessToken) => {
 
 // Check if token is valid
 export const isTokenValid = () => {
-  const token = localStorage.getItem('access_token');
-  const expires = localStorage.getItem('token_expires');
+  const token = SecureStorage.getItem('access_token');
+  const expires = SecureStorage.getItem('token_expires');
   
   if (!token || !expires) return false;
   
@@ -156,10 +161,10 @@ export const isTokenValid = () => {
 // Get valid access token
 export const getValidAccessToken = () => {
   if (isTokenValid()) {
-    return localStorage.getItem('access_token');
+    return SecureStorage.getItem('access_token');
   }
   
-  localStorage.removeItem('access_token');
-  localStorage.removeItem('token_expires');
+  SecureStorage.removeItem('access_token');
+  SecureStorage.removeItem('token_expires');
   return null;
 };
