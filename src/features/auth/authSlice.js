@@ -44,7 +44,8 @@ export const handleSpotifyCallback = createAsyncThunk(
         accessToken: tokenData.access_token,
       };
       
-      localStorage.setItem('spotify_user', JSON.stringify(user));
+      localStorage.setItem('user_data', JSON.stringify(user));
+      localStorage.setItem('access_token', tokenData.access_token);
       return user;
     } catch (error) {
       return rejectWithValue(error.message);
@@ -56,22 +57,22 @@ export const checkAuthStatus = createAsyncThunk(
   'auth/checkAuthStatus',
   async (_, { rejectWithValue }) => {
     try {
-      const storedUser = localStorage.getItem('spotify_user');
+      const storedUser = localStorage.getItem('user_data');
       if (!storedUser) return null;
       
       const token = getValidAccessToken();
       if (!token) {
-        localStorage.removeItem('spotify_user');
-        localStorage.removeItem('spotify_access_token');
-        localStorage.removeItem('spotify_token_expires');
+        localStorage.removeItem('user_data');
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('token_expires');
         return null;
       }
       
       return JSON.parse(storedUser);
     } catch (error) {
-      localStorage.removeItem('spotify_user');
-      localStorage.removeItem('spotify_access_token');
-      localStorage.removeItem('spotify_token_expires');
+      localStorage.removeItem('user_data');
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('token_expires');
       return null;
     }
   }
@@ -80,16 +81,17 @@ export const checkAuthStatus = createAsyncThunk(
 export const logoutUser = createAsyncThunk(
   'auth/logoutUser',
   async () => {
-    localStorage.removeItem('spotify_user');
-    localStorage.removeItem('spotify_access_token');
-    localStorage.removeItem('spotify_token_expires');
-    localStorage.removeItem('spotify_auth_state');
+    localStorage.removeItem('user_data');
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('token_expires');
+    localStorage.removeItem('auth_state');
+    localStorage.removeItem('code_verifier');
   }
 );
 
 const getInitialUser = () => {
   try {
-    const user = localStorage.getItem('spotify_user');
+    const user = localStorage.getItem('user_data');
     return user ? JSON.parse(user) : null;
   } catch {
     return null;
