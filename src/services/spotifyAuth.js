@@ -2,7 +2,7 @@
 const CLIENT_ID = import.meta.env.VITE_SPOTIFY_CLIENT_ID;
 const getRedirectUri = () => {
   const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-  const prodUrl = import.meta.env.VITE_PROD_URL || 'https://vibesmusic.netlify.app';
+  const prodUrl = import.meta.env.VITE_PROD_URL || 'https://vibes-stream.netlify.app';
   return isDevelopment 
     ? 'https://localhost:5173/callback'
     : `${prodUrl}/callback`;

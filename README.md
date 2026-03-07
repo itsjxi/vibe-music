@@ -1,8 +1,8 @@
- # Vibes Music - Music Streaming App
-live demo: https://vibesmusic.netlify.app/
+ # Vibes Stream - Music Streaming App
+live demo: https://vibes-stream.netlify.app/
 
 
-Welcome to Vibes Music! This project is a modern music streaming application built with React, featuring:
+Welcome to Vibes Stream! This project is a modern music streaming application built with React, featuring:
 1) Genre-wise music categorization
 2) Playlist and album tracks with search functionality
 3) User playlist rendering based on login
@@ -44,7 +44,7 @@ Then edit `.env` and add your credentials:
 
 ```
 VITE_SPOTIFY_CLIENT_ID=your_client_id_here
-VITE_PROD_URL=https://vibesmusic.netlify.app
+VITE_PROD_URL=https://vibes-stream.netlify.app
 ```
 
 **Important:** Never commit your `.env` file to GitHub. It's already in `.gitignore`.
@@ -55,7 +55,7 @@ VITE_PROD_URL=https://vibesmusic.netlify.app
 2. Create a new app or use existing one
 3. In app settings, add these Redirect URIs:
    - `https://localhost:5173/callback` (for development)
-   - `https://vibesmusic.netlify.app/callback` (for production)
+   - `https://vibes-stream.netlify.app/callback` (for production)
 4. Copy your Client ID to the `.env` file
 
 ### 2 Start the Development Server
@@ -91,7 +91,7 @@ Sign up for a Netlify account if you don't have one.
 1. Go to Site settings > Build & deploy > Environment
 2. Add environment variables:
    - `VITE_SPOTIFY_CLIENT_ID`: Your Spotify Client ID
-   - `VITE_PROD_URL`: `https://vibesmusic.netlify.app`
+   - `VITE_PROD_URL`: `https://vibes-stream.netlify.app`
 
 ### 5.3 Connect to GitHub Repository
 
@@ -104,7 +104,7 @@ Sign up for a Netlify account if you don't have one.
 ### 5.4 Update Spotify App Settings
 
 Add your Netlify URL to Spotify app's Redirect URIs:
-`https://vibesmusic.netlify.app/callback`
+`https://vibes-stream.netlify.app/callback`
 
 ### 5.5 Deploy
 
@@ -112,6 +112,6 @@ Netlify automatically triggers a build and deploys your site.
 
 ### 5.6 Access Live Site
 
-Once the build is complete, your site will be live at https://vibesmusic.netlify.app/
+Once the build is complete, your site will be live at https://vibes-stream.netlify.app/
 
 
