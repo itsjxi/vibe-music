@@ -11,18 +11,20 @@ const SpotifyCallback = () => {
   const { isLoading, error, isAuthenticated } = useSelector((state) => state.auth);
 
   useEffect(() => {
-    const hash = window.location.hash;
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get('code');
+    const error = urlParams.get('error');
     
-    if (hash.includes('error')) {
+    if (error) {
       toast.error('Spotify authentication was cancelled or failed');
       navigate('/');
       return;
     }
 
-    if (hash.includes('access_token')) {
+    if (code) {
       dispatch(handleSpotifyCallback());
     } else {
-      toast.error('No access token received from Spotify');
+      toast.error('No authorization code received from Spotify');
       navigate('/');
     }
   }, [dispatch, navigate]);

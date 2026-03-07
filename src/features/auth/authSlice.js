@@ -1,7 +1,8 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { 
   redirectToSpotifyAuth, 
-  parseTokenFromHash, 
+  parseCodeFromUrl,
+  exchangeCodeForToken,
   getSpotifyUserProfile,
   getValidAccessToken 
 } from '../../services/spotifyAuth';
@@ -23,12 +24,13 @@ export const handleSpotifyCallback = createAsyncThunk(
   'auth/handleSpotifyCallback',
   async (_, { rejectWithValue }) => {
     try {
-      const tokenData = parseTokenFromHash();
+      const code = parseCodeFromUrl();
       
-      if (!tokenData) {
-        throw new Error('No token found in callback');
+      if (!code) {
+        throw new Error('No authorization code found in callback');
       }
       
+      const tokenData = await exchangeCodeForToken(code);
       const userProfile = await getSpotifyUserProfile(tokenData.access_token);
       
       const user = {
@@ -43,8 +45,6 @@ export const handleSpotifyCallback = createAsyncThunk(
       };
       
       localStorage.setItem('spotify_user', JSON.stringify(user));
-      // Also store token separately for API calls
-      localStorage.setItem('spotify_access_token', tokenData.access_token);
       return user;
     } catch (error) {
       return rejectWithValue(error.message);

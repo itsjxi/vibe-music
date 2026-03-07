@@ -1,6 +1,12 @@
-// Spotify OAuth Configuration (Client-side flow - no client secret needed)
-const SPOTIFY_CLIENT_ID = import.meta.env.VITE_SPOTIFY_CLIENT_ID || '7bdfde888d4c4769a8ea1098483fd0f7';
-const REDIRECT_URI = import.meta.env.VITE_REDIRECT_URI || 'https://musicappspotify023.netlify.app/callback';
+// Music App OAuth Configuration (Authorization Code Flow with PKCE)
+const CLIENT_ID = import.meta.env.VITE_SPOTIFY_CLIENT_ID;
+const getRedirectUri = () => {
+  const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+  const prodUrl = import.meta.env.VITE_PROD_URL || 'https://vibesmusic.netlify.app';
+  return isDevelopment 
+    ? 'https://localhost:5173/callback'
+    : `${prodUrl}/callback`;
+};
 const SCOPES = [
   'user-read-private',
   'user-read-email',
@@ -24,31 +30,89 @@ const generateRandomString = (length) => {
   return text;
 };
 
-// Redirect to Spotify authorization (Implicit Grant Flow)
-export const redirectToSpotifyAuth = () => {
-  const state = generateRandomString(16);
-  localStorage.setItem('spotify_auth_state', state);
-  
-  const params = new URLSearchParams({
-    response_type: 'token',
-    client_id: SPOTIFY_CLIENT_ID,
-    scope: SCOPES,
-    redirect_uri: REDIRECT_URI,
-    state: state,
-    show_dialog: 'true'
-  });
-  
-  window.location.href = `https://accounts.spotify.com/authorize?${params.toString()}`;
+// Generate code verifier for PKCE
+const generateCodeVerifier = () => {
+  return generateRandomString(128);
 };
 
-// Parse access token from URL hash (implicit flow)
-export const parseTokenFromHash = () => {
-  const hash = window.location.hash.substring(1);
-  const params = new URLSearchParams(hash);
+// Generate code challenge from verifier
+const generateCodeChallenge = async (verifier) => {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(verifier);
+  const digest = await window.crypto.subtle.digest('SHA-256', data);
+  return btoa(String.fromCharCode(...new Uint8Array(digest)))
+    .replace(/=/g, '')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_');
+};
+
+// Redirect to music service authorization (Authorization Code Flow with PKCE)
+export const redirectToSpotifyAuth = async () => {
+  const state = generateRandomString(16);
+  const codeVerifier = generateCodeVerifier();
+  const codeChallenge = await generateCodeChallenge(codeVerifier);
+  const redirectUri = getRedirectUri();
   
-  const accessToken = params.get('access_token');
-  const tokenType = params.get('token_type');
-  const expiresIn = params.get('expires_in');
+  localStorage.setItem('auth_state', state);
+  localStorage.setItem('code_verifier', codeVerifier);
+  
+  const params = {
+    response_type: 'code',
+    client_id: CLIENT_ID,
+    scope: SCOPES,
+    redirect_uri: redirectUri,
+    state: state,
+    code_challenge_method: 'S256',
+    code_challenge: codeChallenge,
+    show_dialog: 'true'
+  };
+  
+  const queryString = Object.keys(params)
+    .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(params[key])}`)
+    .join('&');
+  
+  window.location.href = `https://accounts.spotify.com/authorize?${queryString}`;
+};
+
+// Exchange authorization code for access token
+export const exchangeCodeForToken = async (code) => {
+  const codeVerifier = localStorage.getItem('code_verifier');
+  const redirectUri = getRedirectUri();
+  
+  const response = await fetch('https://accounts.spotify.com/api/token', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded'
+    },
+    body: new URLSearchParams({
+      grant_type: 'authorization_code',
+      code: code,
+      redirect_uri: redirectUri,
+      client_id: CLIENT_ID,
+      code_verifier: codeVerifier
+    })
+  });
+  
+  if (!response.ok) {
+    throw new Error('Failed to exchange code for token');
+  }
+  
+  const data = await response.json();
+  
+  localStorage.setItem('access_token', data.access_token);
+  localStorage.setItem('refresh_token', data.refresh_token);
+  localStorage.setItem('token_expires', Date.now() + (data.expires_in * 1000));
+  localStorage.removeItem('auth_state');
+  localStorage.removeItem('code_verifier');
+  
+  return data;
+};
+
+// Parse authorization code from URL
+export const parseCodeFromUrl = () => {
+  const params = new URLSearchParams(window.location.search);
+  
+  const code = params.get('code');
   const state = params.get('state');
   const error = params.get('error');
   
@@ -56,27 +120,12 @@ export const parseTokenFromHash = () => {
     throw new Error(error);
   }
   
-  const storedState = localStorage.getItem('spotify_auth_state');
+  const storedState = localStorage.getItem('auth_state');
   if (state !== storedState) {
     throw new Error('State mismatch error');
   }
   
-  if (accessToken) {
-    localStorage.setItem('spotify_access_token', accessToken);
-    localStorage.setItem('spotify_token_expires', Date.now() + (parseInt(expiresIn) * 1000));
-    localStorage.removeItem('spotify_auth_state');
-    
-    // Clear the hash from URL
-    window.history.replaceState({}, document.title, window.location.pathname);
-    
-    return {
-      access_token: accessToken,
-      token_type: tokenType,
-      expires_in: parseInt(expiresIn)
-    };
-  }
-  
-  return null;
+  return code;
 };
 
 // Get user profile from Spotify
@@ -96,8 +145,8 @@ export const getSpotifyUserProfile = async (accessToken) => {
 
 // Check if token is valid
 export const isTokenValid = () => {
-  const token = localStorage.getItem('spotify_access_token');
-  const expires = localStorage.getItem('spotify_token_expires');
+  const token = localStorage.getItem('access_token');
+  const expires = localStorage.getItem('token_expires');
   
   if (!token || !expires) return false;
   
@@ -107,11 +156,10 @@ export const isTokenValid = () => {
 // Get valid access token
 export const getValidAccessToken = () => {
   if (isTokenValid()) {
-    return localStorage.getItem('spotify_access_token');
+    return localStorage.getItem('access_token');
   }
   
-  // For implicit flow, we need to re-authenticate when token expires
-  localStorage.removeItem('spotify_access_token');
-  localStorage.removeItem('spotify_token_expires');
+  localStorage.removeItem('access_token');
+  localStorage.removeItem('token_expires');
   return null;
 };
