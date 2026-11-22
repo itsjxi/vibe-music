@@ -1,0 +1,232 @@
+/* ============ DISCOVER — KINETIC GLASS ============ */
+.disc-root {
+  padding: var(--s6);
+  max-width: 1300px;
+  margin: 0 auto;
+  padding-bottom: calc(var(--player-h) + var(--s6));
+}
+
+/* Hero */
+.disc-hero {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--s6);
+  align-items: center;
+  padding: var(--s6);
+  border-radius: var(--r-2xl);
+  margin-bottom: var(--s6);
+  overflow: hidden;
+  position: relative;
+}
+
+.disc-hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s1);
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: var(--s3);
+}
+
+.disc-hero-title {
+  font-size: clamp(1.75rem, 4vw, 3rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  color: var(--on-surface);
+  margin-bottom: var(--s3);
+}
+
+.disc-accent { color: var(--accent); }
+
+.disc-hero-desc { color: var(--on-surface-variant); max-width: 400px; }
+
+/* Hero vinyl */
+.disc-hero-art { flex-shrink: 0; }
+
+.disc-hero-vinyl {
+  width: 160px; height: 160px;
+  border-radius: 50%;
+  position: relative;
+  overflow: hidden;
+  box-shadow: var(--shadow-xl);
+  animation: vinyl-spin 10s linear infinite;
+}
+
+.disc-hero-vinyl img { width:100%; height:100%; object-fit:cover; }
+
+.disc-vinyl-hole {
+  position: absolute; inset: 38%;
+  border-radius: 50%;
+  background: rgba(240, 237, 236, 0.9);
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.2);
+}
+
+@keyframes vinyl-spin { to { transform: rotate(360deg); } }
+
+/* Section */
+.disc-section { margin-bottom: var(--s6); }
+
+.disc-section-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: var(--s4);
+}
+
+.disc-section-title {
+  display: flex; align-items: center; gap: var(--s2);
+  color: var(--on-surface);
+}
+
+.disc-see-all {
+  color: var(--accent); font-family: var(--font-mono); font-size: var(--text-xs); letter-spacing: 0.04em;
+}
+.disc-see-all:hover { background: var(--accent-light); color: var(--accent); }
+
+/* Genre chips */
+.disc-genres {
+  display: flex;
+  gap: var(--s3);
+  flex-wrap: wrap;
+}
+
+.disc-genre-chip {
+  padding: var(--s2) var(--s5);
+  border-radius: var(--r-full);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: #fff;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: all var(--t-spring);
+  user-select: none;
+  letter-spacing: 0.02em;
+}
+
+/* Trending grid */
+.disc-trending-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--s3);
+}
+
+.disc-track-card {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  padding: var(--s3);
+  border-radius: var(--r-xl);
+  cursor: pointer;
+  transition: all var(--t-normal);
+}
+
+.disc-track-rank {
+  width: 24px;
+  color: var(--outline);
+  text-align: center;
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.disc-track-art {
+  width: 48px; height: 48px;
+  border-radius: var(--r-md);
+  overflow: hidden;
+  flex-shrink: 0;
+  position: relative;
+  box-shadow: var(--shadow-xs);
+}
+.disc-track-art img { width:100%; height:100%; object-fit:cover; }
+
+.disc-track-play {
+  position: absolute; inset: 0;
+  background: rgba(0,0,0,0.45);
+  display: flex; align-items: center; justify-content: center;
+  color: white; opacity: 0; transition: opacity var(--t-fast);
+}
+.disc-track-card:hover .disc-track-play { opacity: 1; }
+
+.disc-track-meta { flex: 1; overflow: hidden; }
+.disc-track-name   { font-weight: 600; font-size: var(--text-sm); color: var(--on-surface); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-bottom: 1px; }
+.disc-track-artist { color: var(--on-surface-variant); }
+
+/* Artists */
+.disc-artists {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: var(--s4);
+}
+
+.disc-artist-card {
+  border-radius: var(--r-xl);
+  padding: var(--s4);
+  text-align: center;
+  cursor: pointer;
+  transition: all var(--t-normal);
+}
+
+.disc-artist-img {
+  width: 90px; height: 90px;
+  border-radius: 50%;
+  overflow: hidden;
+  margin: 0 auto var(--s3);
+  box-shadow: var(--shadow-md);
+  border: 3px solid var(--surface);
+}
+.disc-artist-img img { width:100%; height:100%; object-fit:cover; }
+
+.disc-artist-name    { font-weight: 600; font-size: var(--text-sm); color: var(--on-surface); margin-bottom: 2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.disc-artist-genre   { color: var(--accent); margin-bottom: 1px; }
+.disc-artist-followers { color: var(--outline); }
+
+/* Playlists */
+.disc-playlists {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: var(--s4);
+}
+
+.disc-pl-card {
+  border-radius: var(--r-xl);
+  padding: var(--s3);
+  cursor: pointer;
+  transition: all var(--t-normal);
+}
+
+.disc-pl-img-wrap {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  margin-bottom: var(--s3);
+  position: relative;
+  box-shadow: var(--shadow-sm);
+}
+.disc-pl-img-wrap img { width:100%; height:100%; object-fit:cover; }
+
+.disc-pl-overlay {
+  position: absolute; inset: 0;
+  background: rgba(0,0,0,0.35);
+  border-radius: var(--r-lg);
+  display: flex; align-items: center; justify-content: center;
+  color: white; opacity: 0; transition: opacity var(--t-fast);
+}
+.disc-pl-card:hover .disc-pl-overlay { opacity: 1; }
+
+.disc-pl-name  { font-weight: 600; font-size: var(--text-sm); color: var(--on-surface); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-bottom: 2px; }
+.disc-pl-desc  { color: var(--on-surface-variant); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-bottom: 2px; }
+.disc-pl-count { color: var(--outline); }
+
+/* Responsive */
+@media (max-width: 768px) {
+  .disc-root { padding: var(--s4); }
+  .disc-hero { grid-template-columns: 1fr; }
+  .disc-hero-art { display: none; }
+  .disc-trending-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 480px) {
+  .disc-root { padding: var(--s3); }
+  .disc-playlists { grid-template-columns: repeat(2, 1fr); }
+  .disc-artists   { grid-template-columns: repeat(2, 1fr); }
+}

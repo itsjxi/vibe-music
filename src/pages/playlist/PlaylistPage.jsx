@@ -1,181 +1,103 @@
-import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import React from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import { motion } from 'framer-motion';
-import { FiPlay, FiPause, FiHeart, FiClock, FiMoreHorizontal } from 'react-icons/fi';
+import { FiPlay, FiHeart, FiClock, FiArrowLeft } from 'react-icons/fi';
 import { setCurrentTrack, setQueue } from '../../features/player/playerSlice';
-import { spotifyService } from '../../services/spotifyApi';
+import { DEMO_PLAYLISTS } from '../../data/demoData';
 import toast from 'react-hot-toast';
 import './PlaylistPage.css';
 
-const PlaylistPage = () => {
-  const { id } = useParams();
+const fmt = ms => {
+  if (!ms) return '--:--';
+  return `${Math.floor(ms / 60000)}:${String(Math.floor((ms % 60000) / 1000)).padStart(2, '0')}`;
+};
+
+export default function PlaylistPage() {
+  const { id }   = useParams();
   const dispatch = useDispatch();
-  const [playlist, setPlaylist] = useState(null);
-  const [tracks, setTracks] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
-  useEffect(() => {
-    fetchPlaylistData();
-  }, [id]);
+  const playlist = DEMO_PLAYLISTS.find(p => p.id === id) || DEMO_PLAYLISTS[0];
+  const tracks   = playlist.tracks.items.map(i => i.track).filter(Boolean);
 
-  const fetchPlaylistData = async () => {
-    try {
-      setLoading(true);
-      const [playlistResponse, tracksResponse] = await Promise.all([
-        spotifyService.getPlaylist(id),
-        spotifyService.getPlaylistTracks(id)
-      ]);
-      
-      setPlaylist(playlistResponse.data);
-      setTracks(tracksResponse.data.items?.map(item => item.track).filter(Boolean) || []);
-    } catch (error) {
-      console.error('Error fetching playlist:', error);
-      toast.error('Failed to load playlist');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handlePlayTrack = (track, index) => {
+  const play = (track, idx) => {
     dispatch(setCurrentTrack(track));
-    dispatch(setQueue({ tracks, startIndex: index }));
+    dispatch(setQueue({ tracks, startIndex: idx }));
     toast.success(`Playing: ${track.name}`);
   };
 
-  const handlePlayAll = () => {
-    if (tracks.length > 0) {
-      handlePlayTrack(tracks[0], 0);
-    }
-  };
-
-  const formatDuration = (ms) => {
-    const minutes = Math.floor(ms / 60000);
-    const seconds = Math.floor((ms % 60000) / 1000);
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-  };
-
-  if (loading) {
-    return (
-      <div className="playlist-page">
-        <div className="playlist-loading">
-          <div className="loading-header">
-            <div className="loading-cover"></div>
-            <div className="loading-info">
-              <div className="loading-line large"></div>
-              <div className="loading-line medium"></div>
-              <div className="loading-line small"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (!playlist) {
-    return (
-      <div className="playlist-page">
-        <div className="playlist-error">
-          <h2>Playlist not found</h2>
-          <p>The playlist you're looking for doesn't exist or is not accessible.</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="playlist-page">
-      {/* Playlist Header */}
-      <motion.div 
-        className="playlist-header"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6 }}
-      >
-        <div className="playlist-cover">
-          <img 
-            src={playlist.images?.[0]?.url || '/placeholder.png'} 
-            alt={playlist.name}
-          />
+    <div className="pp-root">
+
+      {/* Back button */}
+      <button className="btn btn-ghost pp-back" onClick={() => navigate(-1)}>
+        <FiArrowLeft size={18} />
+      </button>
+
+      {/* Header */}
+      <motion.div className="pp-header" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
+        <div className="pp-cover-wrap">
+          <img src={playlist.images[0].url} alt={playlist.name} className="pp-cover" />
+          <div className="pp-cover-glow"
+            style={{ background: `radial-gradient(circle, ${playlist.color || '#7c3aed'}55 0%, transparent 70%)` }} />
         </div>
-        <div className="playlist-info">
-          <span className="playlist-type">Playlist</span>
-          <h1 className="playlist-title">{playlist.name}</h1>
-          {playlist.description && (
-            <p className="playlist-description">{playlist.description}</p>
-          )}
-          <div className="playlist-meta">
-            <span className="playlist-owner">{playlist.owner?.display_name}</span>
-            <span className="playlist-separator">•</span>
-            <span className="playlist-count">{tracks.length} songs</span>
+
+        <div className="pp-info">
+          <span className="pp-type">Playlist</span>
+          <h1 className="pp-title">{playlist.name}</h1>
+          {playlist.description && <p className="pp-desc">{playlist.description}</p>}
+          <span className="pp-meta">{tracks.length} songs</span>
+          <div className="pp-actions">
+            <button className="btn btn-primary pp-play-all" onClick={() => tracks.length && play(tracks[0], 0)}>
+              <FiPlay size={15} /> Play All
+            </button>
+            <button className="btn btn-secondary" style={{ borderRadius: '50%', width: 42, height: 42, padding: 0 }}>
+              <FiHeart size={16} />
+            </button>
           </div>
         </div>
       </motion.div>
 
-      {/* Playlist Controls */}
-      <motion.div 
-        className="playlist-controls"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, delay: 0.2 }}
-      >
-        <button className="btn btn-primary btn-lg play-all-btn" onClick={handlePlayAll}>
-          <FiPlay />
-          Play
-        </button>
-        <button className="btn btn-ghost icon-btn">
-          <FiHeart />
-        </button>
-        <button className="btn btn-ghost icon-btn">
-          <FiMoreHorizontal />
-        </button>
-      </motion.div>
+      {/* Track table */}
+      <motion.div className="pp-tracks" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.15 }}>
 
-      {/* Track List */}
-      <motion.div 
-        className="playlist-tracks"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, delay: 0.4 }}
-      >
-        <div className="track-list">
-          {tracks.map((track, index) => (
-            <motion.div
-              key={track.id}
-              className="track-list-item"
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.3, delay: index * 0.05 }}
-              onClick={() => handlePlayTrack(track, index)}
-            >
-              <div className="track-number">{index + 1}</div>
-              <div className="track-image">
-                <img src={track.album?.images?.[0]?.url || '/placeholder.png'} alt={track.name} />
-                <button className="track-play-btn">
-                  <FiPlay />
-                </button>
-              </div>
-              <div className="track-details">
-                <div className="track-name">{track.name}</div>
-                <div className="track-artist">{track.artists?.map(a => a.name).join(', ')}</div>
-              </div>
-              <div className="track-album">{track.album?.name}</div>
-              <div className="track-duration">
-                {formatDuration(track.duration_ms)}
-              </div>
-            </motion.div>
-          ))}
+        {/* Table header */}
+        <div className="pp-tracks-header pp-track-grid">
+          <span className="pp-th-num">#</span>
+          <span className="pp-th-art" />
+          <span className="pp-th-title">Title</span>
+          <span className="pp-th-album">Album</span>
+          <span className="pp-th-dur"><FiClock size={12} /></span>
         </div>
 
-        {tracks.length === 0 && (
-          <div className="empty-playlist">
-            <h3>This playlist is empty</h3>
-            <p>Add some songs to get started</p>
-          </div>
-        )}
+        {/* Table rows */}
+        {tracks.map((track, i) => (
+          <motion.div
+            key={track.id}
+            className="pp-track-row pp-track-grid"
+            initial={{ opacity: 0, x: -8 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: i * 0.03 }}
+            onClick={() => play(track, i)}
+          >
+            <span className="pp-idx">{i + 1}</span>
+
+            <div className="pp-track-art">
+              <img src={track.album.images[0].url} alt={track.name} />
+              <div className="pp-track-play"><FiPlay size={12} /></div>
+            </div>
+
+            <div className="pp-track-meta">
+              <p className="pp-track-name">{track.name}</p>
+              <p className="pp-track-artist">{track.artists.map(a => a.name).join(', ')}</p>
+            </div>
+
+            <span className="pp-track-album">{track.album.name}</span>
+            <span className="pp-track-dur">{fmt(track.duration_ms)}</span>
+          </motion.div>
+        ))}
       </motion.div>
     </div>
   );
-};
-
-export default PlaylistPage;
+}

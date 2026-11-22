@@ -1,139 +1,77 @@
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { 
-  FiHome, 
-  FiCompass, 
-  FiHeart, 
-  FiMusic, 
-  FiPlus,
-  FiUser
+import { useDispatch } from 'react-redux';
+import {
+  FiGrid, FiSearch, FiBookmark, FiHeart,
+  FiCompass, FiUser, FiLogOut,
 } from 'react-icons/fi';
-import { useSpotifyData } from '../../hooks/useSpotifyData';
+import { logout } from '../../features/auth/authSlice';
 import './Sidebar.css';
 
-const PlaylistList = () => {
-  const navigate = useNavigate();
-  const { data: playlists = [], loading } = useSpotifyData('userPlaylists', { limit: 10 });
-  
-  if (loading) {
-    return (
-      <ul className="nav-list playlist-list">
-        {Array(3).fill(0).map((_, i) => (
-          <li key={i}>
-            <div className="nav-item playlist-item loading-item">
-              <div className="playlist-cover loading-cover-small"></div>
-              <div className="playlist-info">
-                <div className="loading-line"></div>
-                <div className="loading-line short"></div>
-              </div>
-            </div>
-          </li>
-        ))}
-      </ul>
-    );
-  }
-  
-  return (
-    <ul className="nav-list playlist-list">
-      {(playlists || []).map((playlist) => (
-        <li key={playlist.id}>
-          <button 
-            className="nav-item playlist-item"
-            onClick={() => navigate(`/playlist/${playlist.id}`)}
-          >
-            <div className="playlist-cover">
-              {playlist.images?.[0]?.url ? (
-                <img src={playlist.images[0].url} alt={playlist.name} />
-              ) : (
-                <FiMusic />
-              )}
-            </div>
-            <div className="playlist-info">
-              <span className="playlist-name">{playlist.name}</span>
-              <span className="playlist-count">{playlist.tracks?.total || 0} songs</span>
-            </div>
-          </button>
-        </li>
-      ))}
-      {(!playlists || playlists.length === 0) && !loading && (
-        <li>
-          <div className="empty-playlists">
-            <FiMusic />
-            <span>No playlists yet</span>
-          </div>
-        </li>
-      )}
-    </ul>
-  );
-};
+const NAV = [
+  { icon: FiGrid,     label: 'Home',     path: '/home'     },
+  { icon: FiSearch,   label: 'Search',   path: '/search'   },
+  { icon: FiCompass,  label: 'Discover', path: '/discover' },
+  { icon: FiHeart,    label: 'Liked',    path: '/liked'    },
+  { icon: FiBookmark, label: 'Library',  path: '/library'  },
+];
 
-const Sidebar = () => {
+export default function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
-
-  const mainNavItems = [
-    { icon: FiHome, label: 'Home', path: '/home' },
-    { icon: FiCompass, label: 'Search', path: '/search' },
-    { icon: FiHeart, label: 'Liked Songs', path: '/liked' },
-    { icon: FiMusic, label: 'Your Library', path: '/library' },
-  ];
-
-  const bottomNavItems = [
-    { icon: FiUser, label: 'Profile', path: '/profile' },
-  ];
-
-  const isActive = (path) => location.pathname === path;
+  const dispatch = useDispatch();
+  const isActive = (p) => location.pathname === p;
 
   return (
-    <aside className="sidebar glass">
-      <nav className="sidebar-nav">
-        {/* Main Navigation */}
-        <div className="nav-section">
-          <ul className="nav-list">
-            {mainNavItems.map((item) => (
-              <li key={item.path}>
-                <button
-                  className={`nav-item ${isActive(item.path) ? 'active' : ''}`}
-                  onClick={() => navigate(item.path)}
-                >
-                  <item.icon className="nav-icon" />
-                  <span className="nav-label">{item.label}</span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
+    <aside className="sb-root">
+      {/* Logo mark */}
+      <button className="sb-brand" onClick={() => navigate('/home')} aria-label="Home">
+        <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+          <circle cx="11" cy="11" r="9" stroke="white" strokeWidth="1.8"/>
+          <circle cx="11" cy="11" r="3.5" fill="white"/>
+        </svg>
+      </button>
 
-        {/* Playlists Section */}
-        <div className="nav-section">
-          <div className="section-header">
-            <h3 className="section-title">Playlists</h3>
-            <button className="btn btn-ghost icon-btn-sm" title="Create Playlist">
-              <FiPlus />
-            </button>
-          </div>
-          <PlaylistList />
-        </div>
-
-        {/* Bottom Navigation */}
-        <div className="nav-section nav-bottom">
-          <ul className="nav-list">
-            {bottomNavItems.map((item) => (
-              <li key={item.path}>
-                <button
-                  className={`nav-item ${isActive(item.path) ? 'active' : ''}`}
-                  onClick={() => navigate(item.path)}
-                >
-                  <item.icon className="nav-icon" />
-                  <span className="nav-label">{item.label}</span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
+      {/* Main nav */}
+      <nav className="sb-nav">
+        {NAV.map((item) => (
+          <button
+            key={item.path}
+            className={`sb-btn ${isActive(item.path) ? 'sb-active' : ''}`}
+            onClick={() => navigate(item.path)}
+            aria-label={item.label}
+            title={item.label}
+          >
+            {isActive(item.path) && <span className="sb-active-bar" />}
+            <item.icon size={20} strokeWidth={isActive(item.path) ? 2.5 : 1.8} />
+            <span className="sb-label">{item.label}</span>
+          </button>
+        ))}
       </nav>
+
+      {/* Profile + logout */}
+      <div className="sb-bottom">
+        <button
+          className={`sb-btn ${isActive('/profile') ? 'sb-active' : ''}`}
+          onClick={() => navigate('/profile')}
+          aria-label="Profile"
+          title="Profile"
+        >
+          {isActive('/profile') && <span className="sb-active-bar" />}
+          <FiUser size={20} strokeWidth={isActive('/profile') ? 2.5 : 1.8} />
+          <span className="sb-label">Profile</span>
+        </button>
+
+        <button
+          className="sb-btn sb-logout"
+          onClick={() => { dispatch(logout()); navigate('/'); }}
+          aria-label="Sign out"
+          title="Sign out"
+        >
+          <FiLogOut size={20} strokeWidth={1.8} />
+          <span className="sb-label">Sign out</span>
+        </button>
+      </div>
     </aside>
   );
-};
-
-export default Sidebar;
+}

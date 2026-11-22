@@ -1,15 +1,12 @@
 import React from 'react';
+import './LoadingSpinner.css';
 
-const LoadingSpinner = ({ size = 'medium' }) => {
-  const sizeClasses = {
-    small: 'w-4 h-4',
-    medium: 'w-8 h-8', 
-    large: 'w-12 h-12'
-  };
+const LoadingSpinner = ({ size = 'medium', fullPage = false }) => {
+  const px = { small: 24, medium: 36, large: 52 }[size] || 36;
 
   return (
-    <div className="loading-container">
-      <div className={`loading-spinner ${sizeClasses[size]}`}></div>
+    <div className={`kg-spinner-wrap ${fullPage ? 'full-page' : ''}`}>
+      <div className="kg-spinner" style={{ width: px, height: px }} />
     </div>
   );
 };

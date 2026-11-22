@@ -1,100 +1,126 @@
-import React from 'react';
-import { useSelector } from 'react-redux';
+import React, { useState } from 'react';
+import { useSelector, useDispatch } from 'react-redux';
 import { motion } from 'framer-motion';
-import { FiUser, FiSettings, FiEdit } from 'react-icons/fi';
+import { FiUser, FiMail, FiEdit2, FiCheck, FiMusic, FiHeart, FiLogOut } from 'react-icons/fi';
+import { updateUser, logout } from '../../features/auth/authSlice';
+import { useNavigate } from 'react-router-dom';
+import { DEMO_LIKED_SONGS, DEMO_PLAYLISTS, DEMO_RECENTLY_PLAYED } from '../../data/demoData';
+import toast from 'react-hot-toast';
+import './ProfilePage.css';
 
-const ProfilePage = () => {
-  const { user } = useSelector((state) => state.auth);
+export default function ProfilePage() {
+  const dispatch  = useDispatch();
+  const navigate  = useNavigate();
+  const { user }  = useSelector(s => s.auth);
+
+  const [editing, setEditing]   = useState(false);
+  const [name,    setName]      = useState(user?.displayName || '');
+  const [email,   setEmail]     = useState(user?.email || '');
+
+  const save = () => {
+    dispatch(updateUser({ displayName: name.trim() || 'Listener', email: email.trim() }));
+    toast.success('Profile updated');
+    setEditing(false);
+  };
+
+  const stats = [
+    { icon: FiMusic,  label: 'Playlists',     value: DEMO_PLAYLISTS.length },
+    { icon: FiHeart,  label: 'Liked Songs',   value: DEMO_LIKED_SONGS.length },
+    { icon: FiMusic,  label: 'Recent Plays',  value: DEMO_RECENTLY_PLAYED.length },
+  ];
 
   return (
-    <motion.div 
-      className="home-page"
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.6 }}
-    >
-      <section className="hero-section">
-        <div className="hero-content">
-          <h1 className="hero-title gradient-text">
-            <FiUser className="section-icon" />
-            Your Profile
-          </h1>
-          <p className="hero-subtitle">
-            Manage your account settings and preferences
-          </p>
-        </div>
-      </section>
+    <div className="prof-root">
+      {/* Profile card */}
+      <motion.div className="prof-card glass-panel"
+        initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }}>
 
-      <section className="content-section">
-        <div className="section-header">
-          <h2 className="section-title">
-            Account Information
-          </h2>
+        {/* Avatar */}
+        <div className="prof-avatar-wrap">
+          <div className="prof-avatar">
+            {user?.images?.[0]?.url
+              ? <img src={user.images[0].url} alt="" />
+              : <FiUser size={44} />}
+          </div>
+          <div className="prof-avatar-ring" />
         </div>
-        
-        <div className="card" style={{ maxWidth: '600px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-lg)', marginBottom: 'var(--space-lg)' }}>
-            <div style={{ 
-              width: '80px', 
-              height: '80px', 
-              borderRadius: 'var(--radius-full)', 
-              overflow: 'hidden',
-              background: 'var(--primary-gradient)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'white'
-            }}>
-              {user?.images?.[0]?.url ? (
-                <img 
-                  src={user.images[0].url} 
-                  alt="Profile" 
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                />
-              ) : (
-                <FiUser size={32} />
-              )}
-            </div>
-            <div>
-              <h3 style={{ margin: '0 0 var(--space-xs) 0', fontSize: 'var(--text-xl)' }}>
-                {user?.displayName || 'User'}
-              </h3>
-              <p style={{ margin: '0', color: 'var(--text-secondary)' }}>
-                {user?.email || 'No email available'}
-              </p>
-              <p style={{ margin: 'var(--space-xs) 0 0 0', color: 'var(--text-muted)', fontSize: 'var(--text-sm)' }}>
-                {user?.followers?.total || 0} followers • {user?.country || 'Unknown'} • {user?.product || 'Free'}
-              </p>
+
+        {/* Info / edit */}
+        {editing ? (
+          <div className="prof-edit-form">
+            <input
+              className="input prof-input"
+              value={name}
+              onChange={e => setName(e.target.value)}
+              placeholder="Display name"
+            />
+            <input
+              className="input prof-input"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              placeholder="Email"
+              type="email"
+            />
+            <div className="prof-edit-actions">
+              <button className="btn btn-primary" onClick={save}>
+                <FiCheck size={15} /> Save
+              </button>
+              <button className="btn btn-secondary" onClick={() => setEditing(false)}>
+                Cancel
+              </button>
             </div>
           </div>
-          
-          <button className="btn btn-secondary" style={{ alignSelf: 'flex-start' }}>
-            <FiEdit />
-            Edit Profile
-          </button>
-        </div>
-      </section>
-
-      <section className="content-section">
-        <div className="section-header">
-          <h2 className="section-title">
-            <FiSettings className="section-icon" />
-            Settings
-          </h2>
-        </div>
-        
-        <div className="made-for-you-grid">
-          <div className="made-for-you-card card gradient-bg">
-            <div className="made-for-you-content">
-              <FiSettings size={48} />
-              <h3>Profile Settings</h3>
-              <p>Advanced profile and account settings are being developed</p>
-            </div>
+        ) : (
+          <div className="prof-info">
+            <h1 className="prof-name">{user?.displayName || 'Listener'}</h1>
+            <p className="prof-email label-sm"><FiMail size={12} /> {user?.email || 'No email set'}</p>
+            <button className="btn btn-secondary prof-edit-btn" onClick={() => setEditing(true)}>
+              <FiEdit2 size={14} /> Edit Profile
+            </button>
           </div>
+        )}
+      </motion.div>
+
+      {/* Stats row */}
+      <motion.div className="prof-stats"
+        initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.15 }}>
+        {stats.map((s, i) => (
+          <motion.div key={s.label} className="prof-stat-card glass-panel"
+            initial={{ opacity:0, y:12 }} animate={{ opacity:1, y:0 }}
+            transition={{ delay: 0.15 + i * 0.07 }}>
+            <div className="prof-stat-icon"><s.icon size={20} /></div>
+            <p className="prof-stat-value mono-display">{s.value}</p>
+            <p className="prof-stat-label label-sm">{s.label}</p>
+          </motion.div>
+        ))}
+      </motion.div>
+
+      {/* Recent tracks */}
+      <motion.section className="prof-section"
+        initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.25 }}>
+        <h2 className="prof-section-title title-md">Recently Played</h2>
+        <div className="prof-recent-list">
+          {DEMO_RECENTLY_PLAYED.slice(0, 5).map((t, i) => (
+            <div key={t.id} className="prof-recent-row">
+              <span className="prof-recent-idx label-sm">{i+1}</span>
+              <img src={t.album.images[0].url} alt={t.name} className="prof-recent-art" />
+              <div className="prof-recent-meta">
+                <p className="prof-recent-name">{t.name}</p>
+                <p className="prof-recent-artist label-sm">{t.artists[0].name}</p>
+              </div>
+              <span className="prof-recent-genre label-sm">{t.genre}</span>
+            </div>
+          ))}
         </div>
-      </section>
-    </motion.div>
+      </motion.section>
+
+      {/* Sign out */}
+      <motion.div className="prof-signout" initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.35 }}>
+        <button className="btn btn-secondary prof-logout-btn"
+          onClick={() => { dispatch(logout()); navigate('/'); }}>
+          <FiLogOut size={15} /> Sign Out
+        </button>
+      </motion.div>
+    </div>
   );
-};
-
-export default ProfilePage;
+}

@@ -1,47 +1,136 @@
 import React from 'react';
+import { useDispatch } from 'react-redux';
 import { motion } from 'framer-motion';
-import { FiCompass, FiTrendingUp, FiMusic } from 'react-icons/fi';
+import { FiCompass, FiPlay, FiZap, FiTrendingUp } from 'react-icons/fi';
+import { setCurrentTrack, setQueue } from '../../features/player/playerSlice';
+import { DEMO_TRACKS, DEMO_ARTISTS, DEMO_PLAYLISTS } from '../../data/demoData';
+import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
+import './DiscoverPage.css';
 
-const DiscoverPage = () => {
+export default function DiscoverPage() {
+  const dispatch  = useDispatch();
+  const navigate  = useNavigate();
+
+  const play = (track, queue) => {
+    dispatch(setCurrentTrack(track));
+    dispatch(setQueue({ tracks: queue, startIndex: queue.findIndex(t => t.id === track.id) }));
+    toast.success(`Playing: ${track.name}`);
+  };
+
+  const genres = ['Electronic', 'Ambient', 'Chillwave', 'Synthwave', 'Techno', 'Lo-Fi', 'Indie'];
+  const genreColors = ['#7c3aed','#3b82f6','#06b6d4','#f59e0b','#ef4444','#10b981','#f43f5e'];
+
   return (
-    <motion.div 
-      className="home-page"
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.6 }}
-    >
-      <section className="hero-section">
-        <div className="hero-content">
-          <h1 className="hero-title gradient-text">
-            <FiCompass className="section-icon" />
-            Discover New Music
-          </h1>
-          <p className="hero-subtitle">
-            Explore trending songs, new releases, and personalized recommendations
-          </p>
+    <div className="disc-root">
+      {/* Hero */}
+      <motion.div className="disc-hero glass-panel"
+        initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }}>
+        <div className="disc-hero-text">
+          <div className="disc-hero-badge label-sm"><FiCompass size={12} /> Discover</div>
+          <h1 className="disc-hero-title">Find Your Next<br /><span className="disc-accent">Favourite Track</span></h1>
+          <p className="disc-hero-desc body-md">Explore genres, trending artists, and curated playlists.</p>
         </div>
-      </section>
-
-      <section className="content-section">
-        <div className="section-header">
-          <h2 className="section-title">
-            <FiTrendingUp className="section-icon" />
-            Coming Soon
-          </h2>
-        </div>
-        
-        <div className="made-for-you-grid">
-          <div className="made-for-you-card card gradient-bg">
-            <div className="made-for-you-content">
-              <FiMusic size={48} />
-              <h3>Discover Features</h3>
-              <p>New music discovery features are being developed</p>
-            </div>
+        <div className="disc-hero-art">
+          <div className="disc-hero-vinyl">
+            <img src={DEMO_TRACKS[0].album.images[0].url} alt="" />
+            <div className="disc-vinyl-hole" />
           </div>
         </div>
-      </section>
-    </motion.div>
-  );
-};
+      </motion.div>
 
-export default DiscoverPage;
+      {/* Genres */}
+      <section className="disc-section">
+        <div className="disc-section-header">
+          <h2 className="disc-section-title title-md">Browse by Genre</h2>
+        </div>
+        <div className="disc-genres">
+          {genres.map((g, i) => (
+            <motion.div key={g} className="disc-genre-chip"
+              style={{ background: genreColors[i] }}
+              initial={{ opacity:0, scale:0.85 }} animate={{ opacity:1, scale:1 }}
+              transition={{ delay: i * 0.06 }}
+              whileHover={{ scale: 1.04, y: -3 }}
+              onClick={() => navigate(`/search?q=${encodeURIComponent(g)}`)}>
+              <span>{g}</span>
+            </motion.div>
+          ))}
+        </div>
+      </section>
+
+      {/* Trending tracks */}
+      <section className="disc-section">
+        <div className="disc-section-header">
+          <h2 className="disc-section-title title-md"><FiTrendingUp size={16} /> Trending Now</h2>
+          <button className="btn btn-ghost btn-sm disc-see-all" onClick={() => navigate('/search')}>See All</button>
+        </div>
+        <div className="disc-trending-grid">
+          {DEMO_TRACKS.slice(0, 8).map((track, i) => (
+            <motion.div key={track.id} className="disc-track-card glass-panel"
+              initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }}
+              transition={{ delay: i * 0.06 }}
+              whileHover={{ y:-4, boxShadow:'var(--shadow-md)' }}
+              onClick={() => play(track, DEMO_TRACKS)}>
+              <div className="disc-track-rank label-sm">{String(i+1).padStart(2,'0')}</div>
+              <div className="disc-track-art">
+                <img src={track.album.images[0].url} alt={track.name} />
+                <div className="disc-track-play"><FiPlay size={14} /></div>
+              </div>
+              <div className="disc-track-meta">
+                <p className="disc-track-name">{track.name}</p>
+                <p className="disc-track-artist label-sm">{track.artists[0].name}</p>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </section>
+
+      {/* Artists */}
+      <section className="disc-section">
+        <div className="disc-section-header">
+          <h2 className="disc-section-title title-md"><FiZap size={16} /> Featured Artists</h2>
+        </div>
+        <div className="disc-artists">
+          {DEMO_ARTISTS.map((a, i) => (
+            <motion.div key={a.id} className="disc-artist-card glass-panel"
+              initial={{ opacity:0, scale:0.9 }} animate={{ opacity:1, scale:1 }}
+              transition={{ delay: i * 0.07 }}
+              whileHover={{ y: -4 }}>
+              <div className="disc-artist-img">
+                <img src={a.images[0].url} alt={a.name} />
+              </div>
+              <p className="disc-artist-name">{a.name}</p>
+              <p className="disc-artist-genre label-sm">{a.genres[0]}</p>
+              <p className="disc-artist-followers label-sm">{(a.followers.total/1000).toFixed(0)}K fans</p>
+            </motion.div>
+          ))}
+        </div>
+      </section>
+
+      {/* Playlists */}
+      <section className="disc-section">
+        <div className="disc-section-header">
+          <h2 className="disc-section-title title-md">Curated Playlists</h2>
+          <button className="btn btn-ghost btn-sm disc-see-all" onClick={() => navigate('/library')}>See All</button>
+        </div>
+        <div className="disc-playlists">
+          {DEMO_PLAYLISTS.map((pl, i) => (
+            <motion.div key={pl.id} className="disc-pl-card glass-panel"
+              initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }}
+              transition={{ delay: i * 0.07 }}
+              whileHover={{ y:-4, boxShadow:'var(--shadow-md)' }}
+              onClick={() => navigate(`/playlist/${pl.id}`)}>
+              <div className="disc-pl-img-wrap">
+                <img src={pl.images[0].url} alt={pl.name} />
+                <div className="disc-pl-overlay"><FiPlay size={20} /></div>
+              </div>
+              <p className="disc-pl-name">{pl.name}</p>
+              <p className="disc-pl-desc label-sm">{pl.description}</p>
+              <p className="disc-pl-count label-sm">{pl.tracks.total} tracks</p>
+            </motion.div>
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+}

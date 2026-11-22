@@ -1,184 +1,153 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { FiMusic, FiHeart, FiClock, FiGrid, FiList } from 'react-icons/fi';
-import { useSpotifyData } from '../../hooks/useSpotifyData';
+import { FiMusic, FiHeart, FiGrid, FiList, FiClock, FiPlay } from 'react-icons/fi';
+import { useDispatch } from 'react-redux';
+import { setCurrentTrack, setQueue } from '../../features/player/playerSlice';
+import { DEMO_PLAYLISTS, DEMO_RECENTLY_PLAYED, DEMO_LIKED_SONGS } from '../../data/demoData';
+import toast from 'react-hot-toast';
 import './LibraryPage.css';
 
-const LibraryPage = () => {
-  const navigate = useNavigate();
-  const [viewMode, setViewMode] = useState('grid');
-  const [filter, setFilter] = useState('all');
+export default function LibraryPage() {
+  const navigate  = useNavigate();
+  const dispatch  = useDispatch();
+  const [view,    setView]    = useState('grid');
+  const [filter,  setFilter]  = useState('all');
 
-  const { data: playlists, loading: playlistsLoading } = useSpotifyData('userPlaylists', { limit: 50 });
-  const { data: likedSongs, loading: likedLoading } = useSpotifyData('savedTracks', { limit: 1 });
-  const { data: recentlyPlayed, loading: recentLoading } = useSpotifyData('recentlyPlayed', { limit: 20 });
-
-  const loading = playlistsLoading || likedLoading || recentLoading;
-
-  const filters = [
-    { id: 'all', label: 'All' },
-    { id: 'playlists', label: 'Playlists' },
-    { id: 'artists', label: 'Artists' },
-    { id: 'albums', label: 'Albums' }
-  ];
+  const FILTERS = ['all', 'playlists', 'recent'];
 
   const libraryItems = [
     {
       id: 'liked-songs',
       type: 'liked',
       name: 'Liked Songs',
-      description: `${likedSongs?.total || 0} songs`,
-      image: null,
-      onClick: () => navigate('/liked')
+      sub: `${DEMO_LIKED_SONGS.length} songs`,
+      img: null,
+      action: () => navigate('/liked'),
     },
-    ...(playlists || []).map(playlist => ({
-      id: playlist.id,
+    ...DEMO_PLAYLISTS.map(pl => ({
+      id: pl.id,
       type: 'playlist',
-      name: playlist.name,
-      description: `${playlist.tracks?.total || 0} songs`,
-      image: playlist.images?.[0]?.url,
-      onClick: () => navigate(`/playlist/${playlist.id}`)
-    }))
+      name: pl.name,
+      sub: `${pl.tracks.total} tracks`,
+      img: pl.images[0].url,
+      action: () => navigate(`/playlist/${pl.id}`),
+    })),
   ];
 
-  const filteredItems = libraryItems.filter(item => {
-    if (filter === 'all') return true;
-    if (filter === 'playlists') return item.type === 'playlist' || item.type === 'liked';
-    return item.type === filter;
-  });
+  const recentItems = DEMO_RECENTLY_PLAYED.map(t => ({
+    id: t.id,
+    type: 'recent',
+    name: t.name,
+    sub: t.artists[0].name,
+    img: t.album.images[0].url,
+    action: () => {
+      dispatch(setCurrentTrack(t));
+      dispatch(setQueue({ tracks: DEMO_RECENTLY_PLAYED, startIndex: DEMO_RECENTLY_PLAYED.findIndex(x => x.id === t.id) }));
+      toast.success(`Playing: ${t.name}`);
+    },
+  }));
 
-  if (loading) {
-    return (
-      <div className="library-page">
-        <div className="library-loading">
-          {Array(8).fill(0).map((_, i) => (
-            <div key={i} className="loading-item">
-              <div className="loading-image"></div>
-              <div className="loading-text">
-                <div className="loading-line"></div>
-                <div className="loading-line short"></div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  }
+  const items = filter === 'recent' ? recentItems
+    : filter === 'playlists' ? libraryItems.filter(i => i.type !== 'recent')
+    : libraryItems;
 
   return (
-    <div className="library-page">
-      {/* Header */}
-      <motion.div 
-        className="library-header"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6 }}
-      >
-        <h1 className="library-title">Your Library</h1>
-        
-        <div className="library-controls">
-          <div className="library-filters">
-            {filters.map(filterItem => (
-              <button
-                key={filterItem.id}
-                className={`filter-btn ${filter === filterItem.id ? 'active' : ''}`}
-                onClick={() => setFilter(filterItem.id)}
-              >
-                {filterItem.label}
+    <div className="lib-root">
+      {/* Page header */}
+      <motion.div className="lib-header" initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }}>
+        <h1 className="lib-title">Your Library</h1>
+
+        <div className="lib-toolbar">
+          {/* Filter pills */}
+          <div className="lib-filters">
+            {FILTERS.map(f => (
+              <button key={f} className={`lib-filter-btn ${filter===f?'active':''}`} onClick={() => setFilter(f)}>
+                {f.charAt(0).toUpperCase() + f.slice(1)}
               </button>
             ))}
           </div>
-          
-          <div className="view-controls">
-            <button
-              className={`view-btn ${viewMode === 'grid' ? 'active' : ''}`}
-              onClick={() => setViewMode('grid')}
-            >
-              <FiGrid />
+
+          {/* View toggle */}
+          <div className="lib-view-toggle">
+            <button className={`lib-view-btn ${view==='grid'?'active':''}`} onClick={() => setView('grid')} title="Grid view">
+              <FiGrid size={16} />
             </button>
-            <button
-              className={`view-btn ${viewMode === 'list' ? 'active' : ''}`}
-              onClick={() => setViewMode('list')}
-            >
-              <FiList />
+            <button className={`lib-view-btn ${view==='list'?'active':''}`} onClick={() => setView('list')} title="List view">
+              <FiList size={16} />
             </button>
           </div>
         </div>
       </motion.div>
 
-      {/* Content */}
-      <motion.div 
-        className={`library-content ${viewMode}`}
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, delay: 0.2 }}
-      >
-        {filteredItems.map((item, index) => (
-          <motion.div
-            key={item.id}
-            className="library-item"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: index * 0.05 }}
-            onClick={item.onClick}
-          >
-            <div className="item-image">
+      {/* Items */}
+      <motion.div
+        className={`lib-grid ${view}`}
+        initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.1 }}>
+        {items.map((item, i) => (
+          <motion.div key={item.id}
+            className={`lib-item ${view}`}
+            initial={{ opacity:0, y:12 }} animate={{ opacity:1, y:0 }}
+            transition={{ delay: i * 0.04 }}
+            whileHover={view === 'grid' ? { y:-4, boxShadow: 'var(--shadow-md)' } : {}}
+            onClick={item.action}>
+
+            {/* Image */}
+            <div className={`lib-item-img ${view}`}>
               {item.type === 'liked' ? (
-                <div className="liked-cover">
-                  <FiHeart />
-                </div>
-              ) : item.image ? (
-                <img src={item.image} alt={item.name} />
+                <div className="lib-liked-bg"><FiHeart size={view==='grid'?36:22} /></div>
+              ) : item.img ? (
+                <img src={item.img} alt={item.name} />
               ) : (
-                <div className="placeholder-cover">
-                  <FiMusic />
-                </div>
+                <div className="lib-placeholder-bg"><FiMusic size={22} /></div>
               )}
+              {/* Play overlay on hover */}
+              <div className="lib-item-play-overlay">
+                <div className="lib-item-play-btn"><FiPlay size={view==='grid'?18:14} /></div>
+              </div>
             </div>
-            
-            <div className="item-info">
-              <h3 className="item-name">{item.name}</h3>
-              <p className="item-description">{item.description}</p>
+
+            <div className="lib-item-meta">
+              <p className="lib-item-name">{item.name}</p>
+              <p className="lib-item-sub label-sm">{item.sub}</p>
             </div>
           </motion.div>
         ))}
-        
-        {filteredItems.length === 0 && (
-          <div className="empty-library">
-            <FiMusic size={64} />
-            <h3>No items found</h3>
-            <p>Try adjusting your filters</p>
+
+        {items.length === 0 && (
+          <div className="lib-empty">
+            <FiMusic size={52} />
+            <p>Nothing here yet</p>
           </div>
         )}
       </motion.div>
 
-      {/* Recently Played */}
-      {recentlyPlayed && recentlyPlayed.length > 0 && (
-        <motion.section 
-          className="recent-section"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.4 }}
-        >
-          <h2 className="section-title">
-            <FiClock />
-            Recently Played
-          </h2>
-          
-          <div className="recent-grid">
-            {recentlyPlayed.slice(0, 6).map((track, index) => (
-              <motion.div
-                key={`${track.id}-${index}`}
-                className="recent-item"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.3, delay: index * 0.05 }}
-              >
-                <img src={track.album?.images?.[0]?.url || '/placeholder.png'} alt={track.name} />
-                <div className="recent-info">
-                  <span className="recent-name">{track.name}</span>
-                  <span className="recent-artist">{track.artists?.map(a => a.name).join(', ')}</span>
+      {/* Recently played strip (only on 'all' filter) */}
+      {filter === 'all' && (
+        <motion.section className="lib-recent-section"
+          initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.25 }}>
+          <div className="lib-section-header">
+            <h2 className="lib-section-title title-md">
+              <FiClock size={16} /> Recently Played
+            </h2>
+          </div>
+          <div className="lib-recent-list">
+            {DEMO_RECENTLY_PLAYED.slice(0, 6).map((t, i) => (
+              <motion.div key={t.id} className="lib-recent-row"
+                initial={{ opacity:0, x:-10 }} animate={{ opacity:1, x:0 }}
+                transition={{ delay: i * 0.05 }}
+                onClick={() => {
+                  dispatch(setCurrentTrack(t));
+                  dispatch(setQueue({ tracks: DEMO_RECENTLY_PLAYED, startIndex: i }));
+                  toast.success(`Playing: ${t.name}`);
+                }}>
+                <div className="lib-recent-art">
+                  <img src={t.album.images[0].url} alt={t.name} />
+                  <div className="lib-recent-play"><FiPlay size={12} /></div>
+                </div>
+                <div className="lib-recent-meta">
+                  <p className="lib-recent-name">{t.name}</p>
+                  <p className="lib-recent-artist label-sm">{t.artists[0].name}</p>
                 </div>
               </motion.div>
             ))}
@@ -187,6 +156,4 @@ const LibraryPage = () => {
       )}
     </div>
   );
-};
-
-export default LibraryPage;
+}

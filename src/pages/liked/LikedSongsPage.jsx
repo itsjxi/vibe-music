@@ -1,141 +1,90 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useDispatch } from 'react-redux';
 import { motion } from 'framer-motion';
 import { FiPlay, FiHeart, FiClock } from 'react-icons/fi';
 import { setCurrentTrack, setQueue } from '../../features/player/playerSlice';
-import { spotifyService } from '../../services/spotifyApi';
+import { DEMO_LIKED_SONGS } from '../../data/demoData';
 import toast from 'react-hot-toast';
 import './LikedSongsPage.css';
 
-const LikedSongsPage = () => {
+const fmt = ms => {
+  if (!ms) return '--:--';
+  return `${Math.floor(ms / 60000)}:${String(Math.floor((ms % 60000) / 1000)).padStart(2, '0')}`;
+};
+
+export default function LikedSongsPage() {
   const dispatch = useDispatch();
-  const [tracks, setTracks] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const tracks   = DEMO_LIKED_SONGS;
 
-  useEffect(() => {
-    fetchLikedSongs();
-  }, []);
-
-  const fetchLikedSongs = async () => {
-    try {
-      setLoading(true);
-      const response = await spotifyService.getSavedTracks(50);
-      setTracks(response.data.items?.map(item => item.track).filter(Boolean) || []);
-    } catch (error) {
-      console.error('Error fetching liked songs:', error);
-      toast.error('Failed to load liked songs');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handlePlayTrack = (track, index) => {
+  const play = (track, idx) => {
     dispatch(setCurrentTrack(track));
-    dispatch(setQueue({ tracks, startIndex: index }));
+    dispatch(setQueue({ tracks, startIndex: idx }));
     toast.success(`Playing: ${track.name}`);
   };
 
-  const handlePlayAll = () => {
-    if (tracks.length > 0) {
-      handlePlayTrack(tracks[0], 0);
-    }
-  };
-
-  const formatDuration = (ms) => {
-    const minutes = Math.floor(ms / 60000);
-    const seconds = Math.floor((ms % 60000) / 1000);
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-  };
-
-  if (loading) {
-    return (
-      <div className="liked-songs-page">
-        <div className="liked-loading">
-          <div className="loading-header">
-            <div className="loading-cover"></div>
-            <div className="loading-info">
-              <div className="loading-line large"></div>
-              <div className="loading-line medium"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="liked-songs-page">
+    <div className="ls-root">
+
       {/* Header */}
-      <motion.div 
-        className="liked-header"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6 }}
-      >
-        <div className="liked-cover">
-          <FiHeart className="heart-icon" />
+      <motion.div className="ls-header" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
+        <div className="ls-cover">
+          <FiHeart size={44} />
         </div>
-        <div className="liked-info">
-          <span className="liked-type">Playlist</span>
-          <h1 className="liked-title">Liked Songs</h1>
-          <div className="liked-meta">
-            <span className="liked-count">{tracks.length} songs</span>
-          </div>
+        <div className="ls-info">
+          <span className="ls-type">Playlist</span>
+          <h1 className="ls-title">Liked Songs</h1>
+          <span className="ls-meta">{tracks.length} songs</span>
+          <button
+            className="btn btn-primary ls-play-all"
+            onClick={() => tracks.length && play(tracks[0], 0)}
+          >
+            <FiPlay size={15} /> Play All
+          </button>
         </div>
       </motion.div>
 
-      {/* Controls */}
-      <motion.div 
-        className="liked-controls"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, delay: 0.2 }}
-      >
-        <button className="btn btn-primary btn-lg play-all-btn" onClick={handlePlayAll}>
-          <FiPlay />
-          Play
-        </button>
-      </motion.div>
+      {/* Track table */}
+      <motion.div className="ls-tracks" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.15 }}>
 
-      {/* Track List */}
-      <motion.div 
-        className="liked-tracks"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, delay: 0.4 }}
-      >
-        <div className="track-list">
-          {tracks.map((track, index) => (
-            <motion.div
-              key={track.id}
-              className="track-list-item"
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.3, delay: index * 0.05 }}
-              onClick={() => handlePlayTrack(track, index)}
-            >
-              <div className="track-number">{index + 1}</div>
-              <div className="track-image">
-                <img src={track.album?.images?.[0]?.url || '/placeholder.png'} alt={track.name} />
-                <button className="track-play-btn">
-                  <FiPlay />
-                </button>
-              </div>
-              <div className="track-details">
-                <div className="track-name">{track.name}</div>
-                <div className="track-artist">{track.artists?.map(a => a.name).join(', ')}</div>
-              </div>
-              <div className="track-album">{track.album?.name}</div>
-              <div className="track-duration">
-                {formatDuration(track.duration_ms)}
-              </div>
-            </motion.div>
-          ))}
+        {/* Table header */}
+        <div className="ls-tracks-header ls-track-grid">
+          <span className="ls-th-num">#</span>
+          <span className="ls-th-art" />
+          <span className="ls-th-title">Title</span>
+          <span className="ls-th-album">Album</span>
+          <span className="ls-th-dur"><FiClock size={12} /></span>
         </div>
+
+        {/* Rows */}
+        {tracks.map((track, i) => (
+          <motion.div
+            key={track.id}
+            className="ls-track-row ls-track-grid"
+            initial={{ opacity: 0, x: -8 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: i * 0.04 }}
+            onClick={() => play(track, i)}
+          >
+            <span className="ls-idx">{i + 1}</span>
+
+            <div className="ls-track-art">
+              <img src={track.album.images[0].url} alt={track.name} />
+              <div className="ls-track-play"><FiPlay size={12} /></div>
+            </div>
+
+            <div className="ls-track-meta">
+              <p className="ls-track-name">{track.name}</p>
+              <p className="ls-track-artist">{track.artists.map(a => a.name).join(', ')}</p>
+            </div>
+
+            <span className="ls-track-album">{track.album.name}</span>
+            <span className="ls-track-dur">{fmt(track.duration_ms)}</span>
+          </motion.div>
+        ))}
 
         {tracks.length === 0 && (
-          <div className="empty-liked">
-            <FiHeart size={64} />
+          <div className="ls-empty">
+            <FiHeart size={48} />
             <h3>No liked songs yet</h3>
             <p>Songs you like will appear here</p>
           </div>
@@ -143,6 +92,4 @@ const LikedSongsPage = () => {
       </motion.div>
     </div>
   );
-};
-
-export default LikedSongsPage;
+}

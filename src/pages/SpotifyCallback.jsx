@@ -1,67 +1,15 @@
-import React, { useEffect } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
+// Redirect fallback — no longer used for OAuth
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { handleSpotifyCallback } from '../features/auth/authSlice';
-import LoadingSpinner from '../components/ui/LoadingSpinner';
-import toast from 'react-hot-toast';
+import { useSelector } from 'react-redux';
 
-const SpotifyCallback = () => {
-  const dispatch = useDispatch();
+export default function SpotifyCallback() {
   const navigate = useNavigate();
-  const { isLoading, error, isAuthenticated } = useSelector((state) => state.auth);
+  const { isAuthenticated } = useSelector(s => s.auth);
 
   useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const code = urlParams.get('code');
-    const error = urlParams.get('error');
-    
-    if (error) {
-      toast.error('Spotify authentication was cancelled or failed');
-      navigate('/');
-      return;
-    }
-
-    if (code) {
-      dispatch(handleSpotifyCallback());
-    } else {
-      toast.error('No authorization code received from Spotify');
-      navigate('/');
-    }
-  }, [dispatch, navigate]);
-
-  useEffect(() => {
-    if (isAuthenticated) {
-      toast.success('Successfully connected to Spotify!');
-      navigate('/home');
-    }
+    navigate(isAuthenticated ? '/home' : '/', { replace: true });
   }, [isAuthenticated, navigate]);
 
-  useEffect(() => {
-    if (error) {
-      toast.error(error);
-      navigate('/');
-    }
-  }, [error, navigate]);
-
-  return (
-    <div style={{ 
-      display: 'flex', 
-      flexDirection: 'column',
-      alignItems: 'center', 
-      justifyContent: 'center', 
-      minHeight: '100vh',
-      background: 'var(--bg-primary)',
-      color: 'var(--text-primary)'
-    }}>
-      <LoadingSpinner size="large" />
-      <h2 style={{ marginTop: '2rem', fontSize: '1.5rem' }}>
-        Connecting to Spotify...
-      </h2>
-      <p style={{ color: 'var(--text-secondary)', textAlign: 'center', maxWidth: '400px' }}>
-        Please wait while we complete your Spotify authentication.
-      </p>
-    </div>
-  );
-};
-
-export default SpotifyCallback;
+  return null;
+}

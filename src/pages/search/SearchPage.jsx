@@ -1,348 +1,165 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { FiSearch, FiPlay, FiUser, FiDisc, FiMusic } from 'react-icons/fi';
+import { FiSearch, FiPlay, FiMusic, FiUser, FiDisc } from 'react-icons/fi';
 import { useDispatch } from 'react-redux';
 import { setCurrentTrack, setQueue } from '../../features/player/playerSlice';
-import { spotifyService } from '../../services/spotifyApi';
-import TrackPreviewNotice from '../../components/ui/TrackPreviewNotice';
+import { searchDemoData, DEMO_TRACKS } from '../../data/demoData';
 import toast from 'react-hot-toast';
 import './SearchPage.css';
 
-const SearchPage = () => {
+export default function SearchPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const [query, setQuery] = useState(searchParams.get('q') || '');
-  const [results, setResults] = useState({});
-  const [loading, setLoading] = useState(false);
+  const [query,     setQuery]     = useState(searchParams.get('q') || '');
+  const [results,   setResults]   = useState(null);
   const [activeTab, setActiveTab] = useState('all');
-  const [showPreviewNotice, setShowPreviewNotice] = useState(false);
 
   useEffect(() => {
-    const searchQuery = searchParams.get('q');
-    if (searchQuery) {
-      setQuery(searchQuery);
-      if (searchQuery !== query) {
-        performSearch(searchQuery);
-      }
-    } else {
-      setQuery('');
-      setResults({});
-    }
+    const q = searchParams.get('q') || '';
+    setQuery(q);
+    if (q.trim()) setResults(searchDemoData(q));
+    else          setResults(null);
   }, [searchParams]);
 
-  useEffect(() => {
-    const searchQuery = searchParams.get('q');
-    if (searchQuery && !Object.keys(results).length) {
-      performSearch(searchQuery);
-    }
-  }, []);
-
-  const performSearch = async (searchQuery) => {
-    if (!searchQuery.trim()) return;
-    
-    try {
-      setLoading(true);
-      const response = await spotifyService.search(searchQuery, 'track,artist,album,playlist', 50);
-      setResults(response.data);
-    } catch (error) {
-      console.error('Search error:', error);
-      toast.error('Search failed. Please try again.');
-    } finally {
-      setLoading(false);
-    }
+  const handleSearch = e => {
+    e.preventDefault();
+    if (query.trim()) setSearchParams({ q: query.trim() });
   };
 
-
-
-  const handlePlayTrack = (track) => {
-    const trackList = results.tracks?.items || [track];
-    const startIndex = trackList.findIndex(t => t.id === track.id) || 0;
-    
+  const play = (track, queue = DEMO_TRACKS) => {
     dispatch(setCurrentTrack(track));
-    dispatch(setQueue({ tracks: trackList, startIndex }));
+    dispatch(setQueue({ tracks: queue, startIndex: queue.findIndex(t => t.id === track.id) }));
     toast.success(`Playing: ${track.name}`);
   };
 
+  const fmt = ms => {
+    if (!ms) return '--:--';
+    return `${Math.floor(ms/60000)}:${String(Math.floor((ms%60000)/1000)).padStart(2,'0')}`;
+  };
+
   const tabs = [
-    { id: 'all', label: 'All', icon: FiSearch },
-    { id: 'tracks', label: 'Songs', icon: FiMusic },
-    { id: 'artists', label: 'Artists', icon: FiUser },
-    { id: 'albums', label: 'Albums', icon: FiDisc },
-    { id: 'playlists', label: 'Playlists', icon: FiMusic }
+    { id: 'all',      label: 'All',      icon: FiSearch },
+    { id: 'tracks',   label: 'Songs',    icon: FiMusic  },
+    { id: 'artists',  label: 'Artists',  icon: FiUser   },
+    { id: 'playlists',label: 'Playlists',icon: FiDisc   },
   ];
 
-  const renderTopResult = () => {
-    const topTrack = results.tracks?.items?.[0];
-    const topArtist = results.artists?.items?.[0];
-    
-    if (!topTrack && !topArtist) return null;
-
-    return (
-      <div className="top-result-section">
-        <h3 className="section-title">Top result</h3>
-        <div className="top-result-card" onClick={() => topTrack && handlePlayTrack(topTrack)}>
-          <div className="top-result-image">
-            <img 
-              src={topTrack?.album?.images?.[0]?.url || topArtist?.images?.[0]?.url || '/placeholder.png'} 
-              alt={topTrack?.name || topArtist?.name} 
+  return (
+    <div className="sp-root">
+      {/* Search bar */}
+      <div className="sp-hero glass-panel">
+        <form className="sp-form" onSubmit={handleSearch}>
+          <div className="sp-input-wrap">
+            <FiSearch size={18} className="sp-search-ico" />
+            <input
+              type="text" placeholder="Search music, artists, albums…"
+              value={query} onChange={e => setQuery(e.target.value)}
+              className="sp-input" autoFocus
             />
-            {topTrack && (
-              <button className="top-result-play">
-                <FiPlay />
-              </button>
-            )}
           </div>
-          <div className="top-result-info">
-            <h4 className="top-result-title">{topTrack?.name || topArtist?.name}</h4>
-            <div className="top-result-meta">
-              {topTrack ? (
-                <>
-                  <span className="result-type">Song</span>
-                  <span className="result-artist">{topTrack.artists?.map(a => a.name).join(', ')}</span>
-                </>
-              ) : (
-                <>
-                  <span className="result-type">Artist</span>
-                  <span className="result-followers">{topArtist?.followers?.total?.toLocaleString()} followers</span>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
+          <button type="submit" className="btn btn-primary">Search</button>
+        </form>
       </div>
-    );
-  };
 
-  const renderTrackList = (tracks, showAll = false) => {
-    const tracksToShow = showAll ? tracks : tracks?.slice(0, 4);
-    
-    return (
-      <div className="track-list">
-        {tracksToShow?.map((track, index) => (
-          <motion.div
-            key={track.id}
-            className="track-list-item"
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.3, delay: index * 0.05 }}
-            onClick={() => handlePlayTrack(track)}
-          >
-            <div className="track-number">{index + 1}</div>
-            <div className="track-image">
-              <img src={track.album?.images?.[0]?.url || '/placeholder.png'} alt={track.name} />
-              <button className="track-play-btn">
-                <FiPlay />
+      {/* Results */}
+      {results ? (
+        <>
+          {/* Tabs */}
+          <div className="sp-tabs">
+            {tabs.map(t => (
+              <button key={t.id} className={`sp-tab ${activeTab===t.id?'active':''}`}
+                onClick={() => setActiveTab(t.id)}>
+                <t.icon size={14} />{t.label}
               </button>
-            </div>
-            <div className="track-details">
-              <div className="track-name">{track.name}</div>
-              <div className="track-artist">{track.artists?.map(a => a.name).join(', ')}</div>
-            </div>
-            <div className="track-album">{track.album?.name}</div>
-            <div className="track-duration">
-              {track.duration_ms ? Math.floor(track.duration_ms / 60000) + ':' + 
-                String(Math.floor((track.duration_ms % 60000) / 1000)).padStart(2, '0') : '--:--'}
-            </div>
-          </motion.div>
-        ))}
-      </div>
-    );
-  };
-
-  const getImageUrl = (item) => {
-    try {
-      return item?.images?.[0]?.url || 
-             (item?.album && item.album?.images?.[0]?.url) || 
-             '/placeholder.png';
-    } catch (error) {
-      return '/placeholder.png';
-    }
-  };
-
-  const renderGridResults = (items, type) => (
-    <div className="search-grid">
-      {items?.map((item, index) => {
-        if (!item) return null;
-        
-        return (
-          <motion.div
-            key={item.id}
-            className={`search-grid-item ${type}-item`}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: index * 0.05 }}
-            onClick={() => {
-              if (type === 'track') {
-                handlePlayTrack(item);
-              } else if (type === 'playlist') {
-                navigate(`/playlist/${item.id}`);
-              }
-            }}
-          >
-            <div className="grid-item-image">
-              <img 
-                src={getImageUrl(item)} 
-                alt={item?.name || 'Music item'} 
-              />
-              {type === 'track' && (
-                <button className="grid-play-btn">
-                  <FiPlay />
-                </button>
-              )}
-            </div>
-            <div className="grid-item-info">
-              <h4 className="grid-item-title">{item?.name || 'Unknown'}</h4>
-              <p className="grid-item-subtitle">
-                {type === 'artist' && `${item.followers?.total?.toLocaleString()} followers`}
-                {type === 'album' && item.artists?.map(a => a.name).join(', ')}
-                {type === 'playlist' && `By ${item.owner?.display_name}`}
-                {type === 'track' && item.artists?.map(a => a.name).join(', ')}
-              </p>
-            </div>
-          </motion.div>
-        );
-      })}
-    </div>
-  );
-
-  const renderContent = () => {
-    if (loading) {
-      return (
-        <div className="search-loading">
-          <div className="loading-grid">
-            {Array(12).fill(0).map((_, i) => (
-              <div key={i} className="loading-item">
-                <div className="loading-image"></div>
-                <div className="loading-text">
-                  <div className="loading-line"></div>
-                  <div className="loading-line short"></div>
-                </div>
-              </div>
             ))}
           </div>
-        </div>
-      );
-    }
 
-    if (!query.trim()) {
-      return (
-        <div className="search-empty">
-          <FiSearch size={64} />
-          <h3>Search for music</h3>
-          <p>Use the search bar above to find your favorite songs, artists, albums, and playlists</p>
-        </div>
-      );
-    }
-
-    if (!results.tracks && !results.artists && !results.albums && !results.playlists) {
-      return (
-        <div className="search-empty">
-          <FiSearch size={64} />
-          <h3>No results found</h3>
-          <p>Try searching with different keywords</p>
-        </div>
-      );
-    }
-
-    switch (activeTab) {
-      case 'tracks':
-        return (
-          <div className="search-results">
-            <h3 className="section-title">Songs</h3>
-            {renderTrackList(results.tracks?.items, true)}
-          </div>
-        );
-      case 'artists':
-        return (
-          <div className="search-results">
-            <h3 className="section-title">Artists</h3>
-            {renderGridResults(results.artists?.items, 'artist')}
-          </div>
-        );
-      case 'albums':
-        return (
-          <div className="search-results">
-            <h3 className="section-title">Albums</h3>
-            {renderGridResults(results.albums?.items, 'album')}
-          </div>
-        );
-      case 'playlists':
-        return (
-          <div className="search-results">
-            <h3 className="section-title">Playlists</h3>
-            {renderGridResults(results.playlists?.items, 'playlist')}
-          </div>
-        );
-      default:
-        return (
-          <div className="search-results-all">
-            <div className="results-top">
-              {renderTopResult()}
-              {results.tracks?.items?.length > 0 && (
-                <div className="songs-section">
-                  <h3 className="section-title">Songs</h3>
-                  {renderTrackList(results.tracks.items)}
-                </div>
-              )}
-            </div>
-            {results.artists?.items?.length > 0 && (
-              <div className="results-section">
-                <h3 className="section-title">Artists</h3>
-                {renderGridResults(results.artists.items.slice(0, 6), 'artist')}
+          {/* Content */}
+          {(activeTab === 'all' || activeTab === 'tracks') && results.tracks.items.length > 0 && (
+            <section className="sp-section">
+              <h3 className="sp-section-title title-md">Songs</h3>
+              <div className="sp-track-list">
+                {results.tracks.items.map((track, i) => (
+                  <motion.div key={track.id} className="sp-track-row"
+                    initial={{ opacity:0, x:-12 }} animate={{ opacity:1, x:0 }}
+                    transition={{ delay: i*0.04 }}
+                    onClick={() => play(track, results.tracks.items)}>
+                    <span className="sp-idx label-sm">{i+1}</span>
+                    <div className="sp-track-art">
+                      <img src={track.album.images[0].url} alt={track.name} />
+                      <div className="sp-track-play"><FiPlay size={12} /></div>
+                    </div>
+                    <div className="sp-track-meta">
+                      <p className="sp-track-name">{track.name}</p>
+                      <p className="sp-track-artist label-sm">{track.artists.map(a=>a.name).join(', ')}</p>
+                    </div>
+                    <span className="sp-track-album label-sm">{track.album.name}</span>
+                    <span className="sp-track-dur label-sm">{fmt(track.duration_ms)}</span>
+                  </motion.div>
+                ))}
               </div>
-            )}
-            {results.albums?.items?.length > 0 && (
-              <div className="results-section">
-                <h3 className="section-title">Albums</h3>
-                {renderGridResults(results.albums.items.slice(0, 6), 'album')}
+            </section>
+          )}
+
+          {(activeTab === 'all' || activeTab === 'artists') && results.artists.items.length > 0 && (
+            <section className="sp-section">
+              <h3 className="sp-section-title title-md">Artists</h3>
+              <div className="sp-grid">
+                {results.artists.items.map((a, i) => (
+                  <motion.div key={a.id} className="sp-grid-card glass-panel"
+                    initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }}
+                    transition={{ delay: i*0.05 }}
+                    whileHover={{ y:-4 }}>
+                    <div className="sp-grid-art round">
+                      <img src={a.images[0].url} alt={a.name} />
+                    </div>
+                    <p className="sp-grid-name">{a.name}</p>
+                    <p className="sp-grid-sub label-sm">{a.followers.total.toLocaleString()} fans</p>
+                  </motion.div>
+                ))}
               </div>
-            )}
-          </div>
-        );
-    }
-  };
+            </section>
+          )}
 
-  return (
-    <div className="search-page">
-      {query && (
-        <div className="search-header">
-          <div className="search-query-display">
-            <h2>Search results for "{query}"</h2>
-            <span className="result-count">
-              {loading ? 'Searching...' : 
-                `${(results.tracks?.items?.length || 0) + (results.artists?.items?.length || 0) + (results.albums?.items?.length || 0) + (results.playlists?.items?.length || 0)} results`}
-            </span>
-          </div>
+          {(activeTab === 'all' || activeTab === 'playlists') && results.playlists.items.length > 0 && (
+            <section className="sp-section">
+              <h3 className="sp-section-title title-md">Playlists</h3>
+              <div className="sp-grid">
+                {results.playlists.items.map((pl, i) => (
+                  <motion.div key={pl.id} className="sp-grid-card glass-panel"
+                    initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }}
+                    transition={{ delay: i*0.05 }}
+                    whileHover={{ y:-4 }}
+                    onClick={() => navigate(`/playlist/${pl.id}`)}>
+                    <div className="sp-grid-art">
+                      <img src={pl.images[0].url} alt={pl.name} />
+                      <div className="sp-grid-play"><FiPlay size={16} /></div>
+                    </div>
+                    <p className="sp-grid-name">{pl.name}</p>
+                    <p className="sp-grid-sub label-sm">{pl.tracks.total} tracks</p>
+                  </motion.div>
+                ))}
+              </div>
+            </section>
+          )}
 
-          {Object.keys(results).length > 0 && (
-            <div className="search-tabs">
-              {tabs.map(tab => (
-                <button
-                  key={tab.id}
-                  className={`search-tab ${activeTab === tab.id ? 'active' : ''}`}
-                  onClick={() => setActiveTab(tab.id)}
-                >
-                  <tab.icon size={16} />
-                  {tab.label}
-                </button>
-              ))}
+          {results.tracks.items.length === 0 && results.artists.items.length === 0 && (
+            <div className="sp-empty">
+              <FiSearch size={48} />
+              <h3>No results for "{query}"</h3>
+              <p>Try different keywords</p>
             </div>
           )}
+        </>
+      ) : (
+        <div className="sp-empty">
+          <FiSearch size={56} />
+          <h3>Search for music</h3>
+          <p>Find songs, artists, albums and playlists</p>
         </div>
       )}
-
-      <div className="search-content">
-        {renderContent()}
-      </div>
-      
-      <TrackPreviewNotice 
-        show={showPreviewNotice} 
-        onClose={() => setShowPreviewNotice(false)} 
-      />
     </div>
   );
-};
-
-export default SearchPage;
+}

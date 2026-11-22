@@ -2,249 +2,184 @@ import React, { useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { FiPlay, FiHeart, FiClock, FiTrendingUp } from 'react-icons/fi';
-import { setCurrentTrack, setQueue } from '../../features/player/playerSlice';
-import { useSpotifyData } from '../../hooks/useSpotifyData';
-import TrackPreviewNotice from '../../components/ui/TrackPreviewNotice';
+import { FiPlay, FiPause, FiHeart, FiStar } from 'react-icons/fi';
+import { setCurrentTrack, setQueue, togglePlay } from '../../features/player/playerSlice';
+import {
+  DEMO_TRACKS, DEMO_PLAYLISTS, DEMO_ARTISTS,
+  DEMO_RECENTLY_PLAYED, DEMO_TOP_TRACKS,
+} from '../../data/demoData';
 import toast from 'react-hot-toast';
 import './HomePage.css';
 
-const HomePage = () => {
+const fmt = (ms) => {
+  if (!ms) return '--:--';
+  const m = Math.floor(ms / 60000);
+  const s = Math.floor((ms % 60000) / 1000);
+  return `${m}:${s.toString().padStart(2,'0')}`;
+};
+
+export default function HomePage() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { user } = useSelector((state) => state.auth);
-  const [showPreviewNotice, setShowPreviewNotice] = useState(false);
-  
-  const { data: recentlyPlayed, loading: recentLoading } = useSpotifyData('recentlyPlayed', { limit: 10 });
-  const { data: topPlaylists, loading: playlistsLoading } = useSpotifyData('userPlaylists', { limit: 6 });
-  const { data: topTracks, loading: tracksLoading } = useSpotifyData('topTracks', { timeRange: 'short_term', limit: 6 });
-  
-  const loading = recentLoading || playlistsLoading || tracksLoading;
+  const { user } = useSelector((s) => s.auth);
+  const { currentTrack, isPlaying } = useSelector((s) => s.player);
+  const [likedTracks, setLikedTracks] = useState(new Set(DEMO_TRACKS.filter(t=>t.liked).map(t=>t.id)));
 
-  const handlePlayTrack = (track, queue = []) => {
+  const play = (track, queue = DEMO_TRACKS) => {
     dispatch(setCurrentTrack(track));
-    dispatch(setQueue({ 
-      tracks: queue.length > 0 ? queue : [track], 
-      startIndex: queue.findIndex(t => t.id === track.id) || 0 
-    }));
+    dispatch(setQueue({ tracks: queue, startIndex: queue.findIndex(t => t.id === track.id) }));
     toast.success(`Playing: ${track.name}`);
   };
 
-  const getGreeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) return 'Good morning';
-    if (hour < 18) return 'Good afternoon';
-    return 'Good evening';
+  const toggleLike = (id, e) => {
+    e.stopPropagation();
+    setLikedTracks(prev => {
+      const n = new Set(prev);
+      n.has(id) ? n.delete(id) : n.add(id);
+      return n;
+    });
   };
 
+  const isCurrentlyPlaying = (track) => currentTrack?.id === track.id && isPlaying;
+
   return (
-    <div className="home-page">
-      {/* Hero Section */}
-      <motion.section 
-        className="hero-section"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6 }}
-      >
-        <div className="hero-content">
-          <h1 className="hero-title gradient-text">
-            {getGreeting()}, {user?.displayName?.split(' ')[0] || 'Music Lover'}
-          </h1>
-          <p className="hero-subtitle">
-            Ready to discover your next favorite song?
-          </p>
-        </div>
-        
-        <div className="quick-picks">
-          {loading ? (
-            Array(6).fill(0).map((_, i) => (
-              <div key={i} className="quick-pick-card glass loading-card">
-                <div className="loading-cover"></div>
-                <div className="loading-line"></div>
-              </div>
-            ))
-          ) : ((topTracks || []).length > 0 ? (topTracks || []) : (recentlyPlayed || [])).slice(0, 6).map((track, index) => (
-            <motion.div
-              key={track.id}
-              className="quick-pick-card glass"
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.4, delay: index * 0.1 }}
-              onClick={() => handlePlayTrack(track, (topTracks || []).length > 0 ? (topTracks || []) : (recentlyPlayed || []))}
-            >
-              <div className="quick-pick-cover">
-                <img src={track.album?.images?.[0]?.url || '/placeholder.png'} alt={track.name} />
-              </div>
-              <span className="quick-pick-name">{track.name}</span>
-              <button className="quick-pick-play">
-                <FiPlay />
-              </button>
-            </motion.div>
-          ))}
-        </div>
-      </motion.section>
+    <div className="hp-root">
+      {/* ── Two-column layout ── */}
+      <div className="hp-cols">
 
-      {/* Recently Played */}
-      <motion.section 
-        className="content-section"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, delay: 0.2 }}
-      >
-        <div className="section-header">
-          <h2 className="section-title">
-            <FiClock className="section-icon" />
-            Recently Played
-          </h2>
-          <button className="btn btn-ghost">Show all</button>
-        </div>
-        
-        <div className="track-grid">
-          {loading ? (
-            Array(4).fill(0).map((_, i) => (
-              <div key={i} className="track-card card loading-card">
-                <div className="loading-cover"></div>
-                <div className="loading-info">
-                  <div className="loading-line"></div>
-                  <div className="loading-line short"></div>
-                </div>
-              </div>
-            ))
-          ) : (recentlyPlayed || []).map((track, index) => (
-            <motion.div
-              key={track.id}
-              className="track-card card"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: index * 0.1 }}
-              onClick={() => handlePlayTrack(track, recentlyPlayed || [])}
-            >
-              <div className="track-cover">
-                <img src={track.album?.images?.[0]?.url || '/placeholder.png'} alt={track.name} />
-                <button className="play-overlay">
-                  <FiPlay />
-                </button>
-              </div>
-              <div className="track-info">
-                <h3 className="track-title">{track.name}</h3>
-                <p className="track-artist">
-                  {track.artists?.map(artist => artist.name).join(', ')}
-                </p>
-                <p className="track-album">{track.album?.name}</p>
-              </div>
-            </motion.div>
-          ))}
-          {!loading && (!recentlyPlayed || recentlyPlayed.length === 0) && (
-            <div className="empty-state">
-              <FiClock size={48} />
-              <p>No recently played tracks</p>
-            </div>
-          )}
-        </div>
-      </motion.section>
+        {/* ══ LEFT COLUMN ══ */}
+        <div className="hp-left">
 
-      {/* Top Playlists */}
-      <motion.section 
-        className="content-section"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, delay: 0.4 }}
-      >
-        <div className="section-header">
-          <h2 className="section-title">
-            <FiTrendingUp className="section-icon" />
-            Popular Playlists
-          </h2>
-          <button className="btn btn-ghost">Show all</button>
-        </div>
-        
-        <div className="playlist-grid">
-          {loading ? (
-            Array(4).fill(0).map((_, i) => (
-              <div key={i} className="main-playlist-card loading-card">
-                <div className="loading-cover"></div>
-                <div className="loading-info">
-                  <div className="loading-line"></div>
-                  <div className="loading-line short"></div>
-                </div>
-              </div>
-            ))
-          ) : (topPlaylists || []).map((playlist, index) => (
-            <motion.div
-              key={playlist.id}
-              className="main-playlist-card"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: index * 0.1 }}
-              onClick={() => navigate(`/playlist/${playlist.id}`)}
-            >
-              <div className="main-playlist-cover">
-                <img src={playlist.images?.[0]?.url || '/placeholder.png'} alt={playlist.name} />
-                <button className="play-overlay">
-                  <FiPlay />
-                </button>
-              </div>
-              <div className="main-playlist-info">
-                <h3 className="main-playlist-title">{playlist.name}</h3>
-                <p className="main-playlist-description">{playlist.description}</p>
-                <span className="main-playlist-count">{playlist.tracks?.total || 0} songs</span>
-              </div>
-            </motion.div>
-          ))}
-          {!loading && (!topPlaylists || topPlaylists.length === 0) && (
-            <div className="empty-state">
-              <FiTrendingUp size={48} />
-              <p>No playlists available</p>
+          {/* Recommendations */}
+          <section className="hp-section">
+            <div className="hp-section-header">
+              <h2 className="hp-section-title title-md">Recommendation for You</h2>
+              <button className="btn btn-ghost btn-sm hp-see-all">See All</button>
             </div>
-          )}
-        </div>
-      </motion.section>
 
-      {/* Made For You */}
-      <motion.section 
-        className="content-section"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, delay: 0.6 }}
-      >
-        <div className="section-header">
-          <h2 className="section-title">
-            <FiHeart className="section-icon" />
-            Made For You
-          </h2>
-        </div>
-        
-        <div className="made-for-you-grid">
-          <div className="made-for-you-card card gradient-bg">
-            <div className="made-for-you-content">
-              <h3>Liked Songs</h3>
-              <p>Your favorite tracks all in one place</p>
-              <button className="btn btn-primary">
-                <FiHeart />
-                Open
-              </button>
+            <div className="hp-reco-scroll">
+              {DEMO_TOP_TRACKS.slice(0, 6).map((track, i) => (
+                <motion.div key={track.id} className="reco-card glass-panel"
+                  initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }}
+                  transition={{ delay: i * 0.07 }}
+                  whileHover={{ y:-4, boxShadow:'var(--shadow-lg)' }}
+                  onClick={() => play(track, DEMO_TOP_TRACKS)}>
+                  <div className="reco-art-wrap">
+                    <img src={track.album.images[0].url} alt={track.name} className="reco-art" />
+                    <div className="reco-play-ring">
+                      {isCurrentlyPlaying(track)
+                        ? <FiPause size={18} />
+                        : <FiPlay  size={18} />}
+                    </div>
+                  </div>
+                  <p className="reco-name">{track.name}</p>
+                  <p className="reco-artist label-sm">{track.artists[0].name}</p>
+                </motion.div>
+              ))}
             </div>
-          </div>
-          
-          <div className="made-for-you-card card gradient-bg-secondary">
-            <div className="made-for-you-content">
-              <h3>Discover Weekly</h3>
-              <p>Fresh music picked just for you</p>
-              <button className="btn btn-primary">
-                <FiPlay />
-                Play
-              </button>
+          </section>
+
+          {/* Top Artists */}
+          <section className="hp-section">
+            <div className="hp-section-header">
+              <h2 className="hp-section-title title-md">Top Artist</h2>
+              <button className="btn btn-ghost btn-sm hp-see-all" onClick={() => navigate('/search')}>See All</button>
             </div>
-          </div>
+            <div className="hp-artist-row">
+              {DEMO_ARTISTS.slice(0, 4).map((a, i) => (
+                <motion.div key={a.id} className="artist-chip"
+                  initial={{ opacity:0, scale:0.85 }} animate={{ opacity:1, scale:1 }}
+                  transition={{ delay: i * 0.08 }}
+                  whileHover={{ y: -3 }}
+                  onClick={() => navigate('/search')}>
+                  <div className="artist-avatar">
+                    <img src={a.images[0].url} alt={a.name} />
+                  </div>
+                  <p className="artist-name label-sm">{a.name}</p>
+                </motion.div>
+              ))}
+            </div>
+          </section>
+
+          {/* Recent Playlist */}
+          <section className="hp-section">
+            <div className="hp-section-header">
+              <h2 className="hp-section-title title-md">Recent Playlist</h2>
+              <button className="btn btn-ghost btn-sm hp-see-all" onClick={() => navigate('/library')}>See All</button>
+            </div>
+
+            <div className="hp-playlist-list">
+              {DEMO_RECENTLY_PLAYED.slice(0, 4).map((track, i) => {
+                const active = isCurrentlyPlaying(track);
+                return (
+                  <motion.div key={track.id}
+                    className={`pl-row ${active ? 'active' : ''}`}
+                    initial={{ opacity:0, x:-12 }} animate={{ opacity:1, x:0 }}
+                    transition={{ delay: i * 0.06 }}
+                    onClick={() => play(track, DEMO_RECENTLY_PLAYED)}>
+                    <div className="pl-row-art">
+                      <img src={track.album.images[0].url} alt={track.name} />
+                    </div>
+                    <div className="pl-row-meta">
+                      <p className="pl-row-name">{track.name}</p>
+                      <p className="pl-row-artist label-sm">{track.artists[0].name}</p>
+                    </div>
+                    <button
+                      className={`pl-row-play-btn ${active ? 'playing' : ''}`}
+                      onClick={e => { e.stopPropagation(); active ? dispatch(togglePlay()) : play(track, DEMO_RECENTLY_PLAYED); }}>
+                      {active ? <FiPause size={14} /> : <FiPlay size={14} />}
+                    </button>
+                  </motion.div>
+                );
+              })}
+            </div>
+          </section>
         </div>
-      </motion.section>
-      
-      <TrackPreviewNotice 
-        show={showPreviewNotice} 
-        onClose={() => setShowPreviewNotice(false)} 
-      />
+
+        {/* ══ RIGHT COLUMN ══ */}
+        <div className="hp-right">
+
+          {/* Top Albums */}
+          <section className="hp-section">
+            <div className="hp-section-header">
+              <h2 className="hp-section-title title-md">Top Album</h2>
+              <button className="btn btn-ghost btn-sm hp-see-all" onClick={() => navigate('/library')}>See All</button>
+            </div>
+
+            <div className="hp-album-list">
+              {DEMO_PLAYLISTS.slice(0, 3).map((pl, i) => (
+                <motion.div key={pl.id} className="album-row glass-panel"
+                  initial={{ opacity:0, x:12 }} animate={{ opacity:1, x:0 }}
+                  transition={{ delay: i * 0.09 }}
+                  whileHover={{ scale:1.01, boxShadow:'var(--shadow-md)' }}
+                  onClick={() => navigate(`/playlist/${pl.id}`)}>
+                  <img src={pl.images[0].url} alt={pl.name} className="album-row-img" />
+                  <div className="album-row-meta">
+                    <p className="album-row-name">{pl.name}</p>
+                    <p className="album-row-artist label-sm" style={{ color:'var(--outline)' }}>
+                      {pl.tracks.items[0]?.track?.artists[0]?.name || 'Various Artists'}
+                    </p>
+                    <div className="album-row-actions">
+                      <span className="album-rating label-sm">
+                        <FiStar size={11} style={{ color:'#f59e0b', marginRight:3 }} />4.9
+                      </span>
+                      <button className="btn btn-secondary btn-xs album-play-btn"
+                        onClick={e => { e.stopPropagation(); play(pl.tracks.items[0]?.track, pl.tracks.items.map(i=>i.track)); }}>
+                        <FiPlay size={10} /> Play Album
+                      </button>
+                      <button
+                        className={`btn btn-icon-sm album-like-btn ${likedTracks.has(pl.id) ? 'liked' : ''}`}
+                        onClick={e => toggleLike(pl.id, e)}>
+                        <FiHeart size={14} />
+                      </button>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </section>
+        </div>
+      </div>
     </div>
   );
-};
-
-export default HomePage;
+}
