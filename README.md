@@ -1,117 +1,66 @@
- # Vibes Stream - Music Streaming App
-live demo: https://vibes-stream.netlify.app/
+# Vibe Music
 
+A Spotify-style music streaming web app built on the Spotify Web API, with a client-side OAuth 2.0 (PKCE) flow, a persistent player, and a fully routed SPA.
 
-Welcome to Vibes Stream! This project is a modern music streaming application built with React, featuring:
-1) Genre-wise music categorization
-2) Playlist and album tracks with search functionality
-3) User playlist rendering based on login
-4) Single page application routing
-5) Working audio player with play, pause, next, previous, and queue functionalities
+**Live demo:** https://vibes-stream.netlify.app
 
-## Tech Stack
+---
 
-- **React (v18.2.0):** JavaScript library for building user interfaces.
-- **Vite (v5.0.8):** A build tool that aims to provide a faster and more efficient development experience.
-- **React Axios (v2.0.6):** A lightweight wrapper around Axios for making HTTP requests in React applications.
-- **React Icons (v4.12.0):** A popular library for including SVG icons in React projects.
-- **"react-router-dom": "^5.3.4"** implimenting single page application.
+## Highlights
 
-## Project Setup
+- **OAuth 2.0 Authorization Code + PKCE, entirely in the browser.** No backend and no client secret. The app generates the code verifier and challenge, handles the callback, exchanges the code for a token, and stores it with expiry awareness (`utils/secureStorage`), so stale tokens are discarded automatically.
+- **Player with a global queue.** Play, pause, next, previous, seek, and an upcoming-tracks queue. Player state lives in a Redux Toolkit slice, so playback keeps going while you move between routes.
+- **Search across tracks, albums and artists**, with drill-down pages for album tracks and artist top tracks.
+- **Library, Liked Songs, Playlists, Discover and Profile pages**, gated by a `ProtectedRoute`.
+- **Demo mode.** Local demo data lets the UI work without a Spotify login, which helps reviewers who only want to look around.
+- **Draggable mini-player** built with Framer Motion.
 
-Follow these guidelines to set up and run the project locally on our machine.
+## Architecture
 
+```
+src/
+├── features/            Redux Toolkit slices: auth, player, ui
+├── hooks/               useSpotifyData: data fetching and caching for Web API calls
+├── components/
+│   ├── auth/            ProtectedRoute
+│   ├── layout/          Header, Sidebar
+│   └── player/          AudioPlayer, SpotifyPlayer, DraggablePlayer
+├── pages/               Route-level screens (home, search, playlist, library, liked, discover, profile)
+├── utils/               secureStorage (token storage), performance helpers
+└── data/                Demo data for unauthenticated mode
+```
 
-### 1. Install Dependencies and adding required data
+**Key decisions**
 
-#### 1.1 Clone the Repository
+| Decision | Why |
+|---|---|
+| PKCE instead of the implicit grant | The implicit grant is deprecated. PKCE is the current recommendation for public clients that can't hold a secret. |
+| Redux Toolkit for player and auth | Several distant components (header, sidebar, footer player, pages) read and change the same playback state. |
+| Route-level pages plus shared layout | Keeps the player and navigation mounted across navigation, so audio isn't interrupted. |
+
+## Tech stack
+
+React 18 · Vite · Redux Toolkit · React Router · Framer Motion · Axios · Spotify Web API
+
+## Getting started
 
 ```bash
-git clone https://github.com/itsjxi/SpotifyClone023.git
-cd SpotifyClone023
+git clone https://github.com/itsjxi/vibe-music.git
+cd vibe-music
 npm install
-```
-
-#### 1.2 Setup Environment Variables
-
-Create a `.env` file in the root directory:
-
-```bash
-cp .env.example .env
-```
-
-Then edit `.env` and add your credentials:
-
-```
-VITE_SPOTIFY_CLIENT_ID=your_client_id_here
-VITE_PROD_URL=https://vibes-stream.netlify.app
-```
-
-**Important:** Never commit your `.env` file to GitHub. It's already in `.gitignore`.
-
-#### 1.3 Configure Spotify App
-
-1. Go to [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)
-2. Create a new app or use existing one
-3. In app settings, add these Redirect URIs:
-   - `https://localhost:5173/callback` (for development)
-   - `https://vibes-stream.netlify.app/callback` (for production)
-4. Copy your Client ID to the `.env` file
-
-### 2 Start the Development Server
-```bash
+cp .env.example .env     # add your Spotify Client ID
 npm run dev
 ```
-This command starts the development server at http://localhost:5173
 
-### 3 Open in Browser
-Open your web browser and navigate to http://localhost:5173 to view the running project.
+You need a Spotify developer app, with `http://localhost:5173/callback` added as a Redirect URI. See [SPOTIFY_SETUP.md](./SPOTIFY_SETUP.md) and [SECURITY.md](./SECURITY.md).
 
-## 4. Authentication Flow
+| Variable | Description |
+|---|---|
+| `VITE_SPOTIFY_CLIENT_ID` | Client ID of your Spotify app |
+| `VITE_PROD_URL` | Deployed origin, used to build the redirect URI |
 
-This app uses Spotify Web API with OAuth 2.0 Authorization Code Flow with PKCE:
+## Roadmap
 
-1. User clicks "Connect Spotify"
-2. Redirects to Spotify login
-3. After authorization, Spotify redirects back with authorization code
-4. App exchanges code for access token
-5. Access token is used to fetch user data and playlists
-
-**Security Note:** This implementation uses PKCE (Proof Key for Code Exchange) which is secure for client-side apps and doesn't require a client secret. 
-
-
-## 5. Deploying to Netlify
-
-### 5.1 Create a Netlify Account
-
-Sign up for a Netlify account if you don't have one.
-
-### 5.2 Configure Environment Variables on Netlify
-
-1. Go to Site settings > Build & deploy > Environment
-2. Add environment variables:
-   - `VITE_SPOTIFY_CLIENT_ID`: Your Spotify Client ID
-   - `VITE_PROD_URL`: `https://vibes-stream.netlify.app`
-
-### 5.3 Connect to GitHub Repository
-
-1. Click "New site from Git"
-2. Select your GitHub repository
-3. Build settings:
-   - Build command: `npm run build`
-   - Publish directory: `dist`
-
-### 5.4 Update Spotify App Settings
-
-Add your Netlify URL to Spotify app's Redirect URIs:
-`https://vibes-stream.netlify.app/callback`
-
-### 5.5 Deploy
-
-Netlify automatically triggers a build and deploys your site.
-
-### 5.6 Access Live Site
-
-Once the build is complete, your site will be live at https://vibes-stream.netlify.app/
-
-
+- Remove the legacy `screens/` tree now that `pages/` replaces it
+- Migrate data fetching to TanStack Query for caching and request deduplication
+- Add unit tests for the auth slice and the PKCE helpers
