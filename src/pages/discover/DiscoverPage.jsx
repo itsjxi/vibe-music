@@ -1,18 +1,20 @@
-import React from 'react';
 import { useDispatch } from 'react-redux';
 import { motion } from 'framer-motion';
 import { FiCompass, FiPlay, FiZap, FiTrendingUp } from 'react-icons/fi';
 import { setCurrentTrack, setQueue } from '../../features/player/playerSlice';
-import { DEMO_TRACKS, DEMO_ARTISTS, DEMO_PLAYLISTS } from '../../data/demoData';
+import useLibrary from '../../hooks/useLibrary';
+import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import './DiscoverPage.css';
 
 export default function DiscoverPage() {
+  const { tracks: libTracks, playlists: libPlaylists, artists: libArtists, loading: libLoading } = useLibrary();
   const dispatch  = useDispatch();
   const navigate  = useNavigate();
 
   const play = (track, queue) => {
+    if (!track) return;
     dispatch(setCurrentTrack(track));
     dispatch(setQueue({ tracks: queue, startIndex: queue.findIndex(t => t.id === track.id) }));
     toast.success(`Playing: ${track.name}`);
@@ -20,6 +22,8 @@ export default function DiscoverPage() {
 
   const genres = ['Electronic', 'Ambient', 'Chillwave', 'Synthwave', 'Techno', 'Lo-Fi', 'Indie'];
   const genreColors = ['#7c3aed','#3b82f6','#06b6d4','#f59e0b','#ef4444','#10b981','#f43f5e'];
+
+  if (libLoading) return <LoadingSpinner />;
 
   return (
     <div className="disc-root">
@@ -33,7 +37,7 @@ export default function DiscoverPage() {
         </div>
         <div className="disc-hero-art">
           <div className="disc-hero-vinyl">
-            <img src={DEMO_TRACKS[0].album.images[0].url} alt="" />
+            {libTracks[0] && <img src={libTracks[0].album.images[0].url} alt="" />}
             <div className="disc-vinyl-hole" />
           </div>
         </div>
@@ -65,12 +69,12 @@ export default function DiscoverPage() {
           <button className="btn btn-ghost btn-sm disc-see-all" onClick={() => navigate('/search')}>See All</button>
         </div>
         <div className="disc-trending-grid">
-          {DEMO_TRACKS.slice(0, 8).map((track, i) => (
+          {libTracks.slice(0, 8).map((track, i) => (
             <motion.div key={track.id} className="disc-track-card glass-panel"
               initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }}
               transition={{ delay: i * 0.06 }}
               whileHover={{ y:-4, boxShadow:'var(--shadow-md)' }}
-              onClick={() => play(track, DEMO_TRACKS)}>
+              onClick={() => play(track, libTracks)}>
               <div className="disc-track-rank label-sm">{String(i+1).padStart(2,'0')}</div>
               <div className="disc-track-art">
                 <img src={track.album.images[0].url} alt={track.name} />
@@ -78,7 +82,7 @@ export default function DiscoverPage() {
               </div>
               <div className="disc-track-meta">
                 <p className="disc-track-name">{track.name}</p>
-                <p className="disc-track-artist label-sm">{track.artists[0].name}</p>
+                <p className="disc-track-artist label-sm">{track.artists[0]?.name}</p>
               </div>
             </motion.div>
           ))}
@@ -91,7 +95,7 @@ export default function DiscoverPage() {
           <h2 className="disc-section-title title-md"><FiZap size={16} /> Featured Artists</h2>
         </div>
         <div className="disc-artists">
-          {DEMO_ARTISTS.map((a, i) => (
+          {libArtists.map((a, i) => (
             <motion.div key={a.id} className="disc-artist-card glass-panel"
               initial={{ opacity:0, scale:0.9 }} animate={{ opacity:1, scale:1 }}
               transition={{ delay: i * 0.07 }}
@@ -100,7 +104,7 @@ export default function DiscoverPage() {
                 <img src={a.images[0].url} alt={a.name} />
               </div>
               <p className="disc-artist-name">{a.name}</p>
-              <p className="disc-artist-genre label-sm">{a.genres[0]}</p>
+              <p className="disc-artist-genre label-sm">{a.genres[0] ?? ""}</p>
               <p className="disc-artist-followers label-sm">{(a.followers.total/1000).toFixed(0)}K fans</p>
             </motion.div>
           ))}
@@ -114,7 +118,7 @@ export default function DiscoverPage() {
           <button className="btn btn-ghost btn-sm disc-see-all" onClick={() => navigate('/library')}>See All</button>
         </div>
         <div className="disc-playlists">
-          {DEMO_PLAYLISTS.map((pl, i) => (
+          {libPlaylists.map((pl, i) => (
             <motion.div key={pl.id} className="disc-pl-card glass-panel"
               initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }}
               transition={{ delay: i * 0.07 }}

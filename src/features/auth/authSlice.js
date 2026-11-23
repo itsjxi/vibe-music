@@ -1,28 +1,40 @@
 import { createSlice } from '@reduxjs/toolkit';
+import { clearSpotifySession } from '../../services/spotifyAuth';
 
-// Simple demo auth — no external API required
+// Two ways in: a real Spotify account (OAuth 2.0 PKCE) or a demo profile with bundled data.
 const DEMO_USER = {
   id: 'demo-user',
-  displayName: 'Aura Listener',
-  email: 'listener@aura.fm',
+  displayName: 'Demo Listener',
+  email: 'demo@vibe.music',
   images: [],
 };
 
-const loadUser = () => {
+const STORAGE_KEY = 'aura_user';
+
+const loadSession = () => {
   try {
-    const stored = localStorage.getItem('aura_user');
-    return stored ? JSON.parse(stored) : null;
+    const stored = JSON.parse(localStorage.getItem(STORAGE_KEY));
+    if (!stored) return null;
+    // Older saved sessions only stored the user object
+    return stored.user ? stored : { user: stored, mode: 'demo' };
   } catch {
     return null;
   }
 };
 
-const savedUser = loadUser();
+const saveSession = (state) => {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ user: state.user, mode: state.mode }));
+  } catch { /* storage unavailable */ }
+};
+
+const session = loadSession();
 
 const initialState = {
-  user: savedUser,
-  isAuthenticated: !!savedUser,
-  isInitialized: true,   // no async init needed
+  user: session?.user ?? null,
+  mode: session?.mode ?? null,          // 'demo' | 'spotify' | null
+  isAuthenticated: Boolean(session?.user),
+  isInitialized: true,
   isLoading: false,
   error: null,
 };
@@ -32,23 +44,35 @@ const authSlice = createSlice({
   initialState,
   reducers: {
     loginDemo: (state, action) => {
-      const user = { ...DEMO_USER, ...(action.payload || {}) };
-      state.user = user;
+      state.user = { ...DEMO_USER, ...(action.payload || {}) };
+      state.mode = 'demo';
       state.isAuthenticated = true;
       state.error = null;
-      localStorage.setItem('aura_user', JSON.stringify(user));
+      saveSession(state);
+    },
+    loginSpotify: (state, action) => {
+      state.user = action.payload;
+      state.mode = 'spotify';
+      state.isAuthenticated = true;
+      state.error = null;
+      saveSession(state);
     },
     logout: (state) => {
       state.user = null;
+      state.mode = null;
       state.isAuthenticated = false;
       state.error = null;
-      localStorage.removeItem('aura_user');
+      try { localStorage.removeItem(STORAGE_KEY); } catch { /* storage unavailable */ }
+      clearSpotifySession();
     },
     updateUser: (state, action) => {
       if (state.user) {
         state.user = { ...state.user, ...action.payload };
-        localStorage.setItem('aura_user', JSON.stringify(state.user));
+        saveSession(state);
       }
+    },
+    setAuthError: (state, action) => {
+      state.error = action.payload;
     },
     clearError: (state) => {
       state.error = null;
@@ -56,9 +80,7 @@ const authSlice = createSlice({
   },
 });
 
-export const { loginDemo, logout, updateUser, clearError } = authSlice.actions;
+export const {
+  loginDemo, loginSpotify, logout, updateUser, setAuthError, clearError,
+} = authSlice.actions;
 export default authSlice.reducer;
-
-// Keep old thunk names as aliases so existing imports don't break
-export const logoutUser = logout;
-export const checkAuthStatus = () => () => {};   // no-op thunk

@@ -1,31 +1,24 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { FiPlay, FiPause, FiHeart, FiStar } from 'react-icons/fi';
 import { setCurrentTrack, setQueue, togglePlay } from '../../features/player/playerSlice';
-import {
-  DEMO_TRACKS, DEMO_PLAYLISTS, DEMO_ARTISTS,
-  DEMO_RECENTLY_PLAYED, DEMO_TOP_TRACKS,
-} from '../../data/demoData';
+import useLibrary from '../../hooks/useLibrary';
+import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import toast from 'react-hot-toast';
 import './HomePage.css';
 
-const fmt = (ms) => {
-  if (!ms) return '--:--';
-  const m = Math.floor(ms / 60000);
-  const s = Math.floor((ms % 60000) / 1000);
-  return `${m}:${s.toString().padStart(2,'0')}`;
-};
-
 export default function HomePage() {
+  const { tracks: libTracks, playlists: libPlaylists, artists: libArtists, recentlyPlayed: libRecent, topTracks: libTop, loading: libLoading, source } = useLibrary();
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { user } = useSelector((s) => s.auth);
   const { currentTrack, isPlaying } = useSelector((s) => s.player);
-  const [likedTracks, setLikedTracks] = useState(new Set(DEMO_TRACKS.filter(t=>t.liked).map(t=>t.id)));
+  const [likedTracks, setLikedTracks] = useState(new Set(libTracks.filter(t=>t.liked).map(t=>t.id)));
 
-  const play = (track, queue = DEMO_TRACKS) => {
+  const play = (track, queue = libTracks) => {
+    if (!track) return;
     dispatch(setCurrentTrack(track));
     dispatch(setQueue({ tracks: queue, startIndex: queue.findIndex(t => t.id === track.id) }));
     toast.success(`Playing: ${track.name}`);
@@ -42,8 +35,16 @@ export default function HomePage() {
 
   const isCurrentlyPlaying = (track) => currentTrack?.id === track.id && isPlaying;
 
+  if (libLoading) return <LoadingSpinner />;
+
   return (
     <div className="hp-root">
+      <header className="hp-greeting">
+        <h1 className="title-md">Welcome back{user?.displayName ? `, ${user.displayName}` : ''}</h1>
+        <span className={`hp-source hp-source-${source}`}>
+          {source === 'spotify' ? 'Your Spotify library' : 'Demo data'}
+        </span>
+      </header>
       {/* ── Two-column layout ── */}
       <div className="hp-cols">
 
@@ -58,12 +59,12 @@ export default function HomePage() {
             </div>
 
             <div className="hp-reco-scroll">
-              {DEMO_TOP_TRACKS.slice(0, 6).map((track, i) => (
+              {libTop.slice(0, 6).map((track, i) => (
                 <motion.div key={track.id} className="reco-card glass-panel"
                   initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }}
                   transition={{ delay: i * 0.07 }}
                   whileHover={{ y:-4, boxShadow:'var(--shadow-lg)' }}
-                  onClick={() => play(track, DEMO_TOP_TRACKS)}>
+                  onClick={() => play(track, libTop)}>
                   <div className="reco-art-wrap">
                     <img src={track.album.images[0].url} alt={track.name} className="reco-art" />
                     <div className="reco-play-ring">
@@ -73,7 +74,7 @@ export default function HomePage() {
                     </div>
                   </div>
                   <p className="reco-name">{track.name}</p>
-                  <p className="reco-artist label-sm">{track.artists[0].name}</p>
+                  <p className="reco-artist label-sm">{track.artists[0]?.name}</p>
                 </motion.div>
               ))}
             </div>
@@ -86,7 +87,7 @@ export default function HomePage() {
               <button className="btn btn-ghost btn-sm hp-see-all" onClick={() => navigate('/search')}>See All</button>
             </div>
             <div className="hp-artist-row">
-              {DEMO_ARTISTS.slice(0, 4).map((a, i) => (
+              {libArtists.slice(0, 4).map((a, i) => (
                 <motion.div key={a.id} className="artist-chip"
                   initial={{ opacity:0, scale:0.85 }} animate={{ opacity:1, scale:1 }}
                   transition={{ delay: i * 0.08 }}
@@ -109,24 +110,24 @@ export default function HomePage() {
             </div>
 
             <div className="hp-playlist-list">
-              {DEMO_RECENTLY_PLAYED.slice(0, 4).map((track, i) => {
+              {libRecent.slice(0, 4).map((track, i) => {
                 const active = isCurrentlyPlaying(track);
                 return (
                   <motion.div key={track.id}
                     className={`pl-row ${active ? 'active' : ''}`}
                     initial={{ opacity:0, x:-12 }} animate={{ opacity:1, x:0 }}
                     transition={{ delay: i * 0.06 }}
-                    onClick={() => play(track, DEMO_RECENTLY_PLAYED)}>
+                    onClick={() => play(track, libRecent)}>
                     <div className="pl-row-art">
                       <img src={track.album.images[0].url} alt={track.name} />
                     </div>
                     <div className="pl-row-meta">
                       <p className="pl-row-name">{track.name}</p>
-                      <p className="pl-row-artist label-sm">{track.artists[0].name}</p>
+                      <p className="pl-row-artist label-sm">{track.artists[0]?.name}</p>
                     </div>
                     <button
                       className={`pl-row-play-btn ${active ? 'playing' : ''}`}
-                      onClick={e => { e.stopPropagation(); active ? dispatch(togglePlay()) : play(track, DEMO_RECENTLY_PLAYED); }}>
+                      onClick={e => { e.stopPropagation(); active ? dispatch(togglePlay()) : play(track, libRecent); }}>
                       {active ? <FiPause size={14} /> : <FiPlay size={14} />}
                     </button>
                   </motion.div>
@@ -147,7 +148,7 @@ export default function HomePage() {
             </div>
 
             <div className="hp-album-list">
-              {DEMO_PLAYLISTS.slice(0, 3).map((pl, i) => (
+              {libPlaylists.slice(0, 3).map((pl, i) => (
                 <motion.div key={pl.id} className="album-row glass-panel"
                   initial={{ opacity:0, x:12 }} animate={{ opacity:1, x:0 }}
                   transition={{ delay: i * 0.09 }}

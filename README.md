@@ -1,6 +1,8 @@
 # Vibe Music
 
-A Spotify-style music streaming web app built on the Spotify Web API, with a client-side OAuth 2.0 (PKCE) flow, a persistent player, and a fully routed SPA.
+[![CI](https://github.com/itsjxi/vibe-music/actions/workflows/ci.yml/badge.svg)](https://github.com/itsjxi/vibe-music/actions/workflows/ci.yml)
+
+A music app built on the Spotify Web API. Sign in with Spotify to browse **your own** playlists, liked songs, top tracks and artists, or try the demo mode, which runs on bundled data with no account needed.
 
 **Live demo:** https://vibes-stream.netlify.app
 
@@ -8,39 +10,55 @@ A Spotify-style music streaming web app built on the Spotify Web API, with a cli
 
 ## Highlights
 
-- **OAuth 2.0 Authorization Code + PKCE, entirely in the browser.** No backend and no client secret. The app generates the code verifier and challenge, handles the callback, exchanges the code for a token, and stores it with expiry awareness (`utils/secureStorage`), so stale tokens are discarded automatically.
-- **Player with a global queue.** Play, pause, next, previous, seek, and an upcoming-tracks queue. Player state lives in a Redux Toolkit slice, so playback keeps going while you move between routes.
-- **Search across tracks, albums and artists**, with drill-down pages for album tracks and artist top tracks.
-- **Library, Liked Songs, Playlists, Discover and Profile pages**, gated by a `ProtectedRoute`.
-- **Demo mode.** Local demo data lets the UI work without a Spotify login, which helps reviewers who only want to look around.
-- **Draggable mini-player** built with Framer Motion.
+- **OAuth 2.0 Authorization Code + PKCE, entirely in the browser.** There's no backend and no client secret. The code verifier and state are generated with `crypto.getRandomValues`, the state is checked on the callback, and the code is exchanged for tokens.
+- **Token lifecycle.** Access tokens are treated as expired 60 seconds early. They're refreshed with the refresh token, rotated refresh tokens are stored, and concurrent refreshes share a single request. An Axios interceptor retries a `401` once after refreshing. If refresh fails, the user is signed out.
+- **One data layer for two sources.** `useLibrary()` returns either the user's Spotify library or demo data in the same shape, so pages don't know or care where data comes from. Spotify responses are normalised in pure, tested mappers (`services/spotifyMappers.js`).
+- **Resilient loading.** The library loads with `Promise.allSettled`, so one failing endpoint (for example, no listening history) leaves that section empty instead of breaking the app. Playlists fetch their tracks on demand.
+- **Global player and queue** in Redux Toolkit, with a draggable mini-player (Framer Motion). Playback continues across routes.
+- **Route-level code splitting** with `React.lazy` and `Suspense`.
 
 ## Architecture
 
 ```
 src/
-├── features/            Redux Toolkit slices: auth, player, ui
-├── hooks/               useSpotifyData: data fetching and caching for Web API calls
-├── components/
-│   ├── auth/            ProtectedRoute
-│   ├── layout/          Header, Sidebar
-│   └── player/          AudioPlayer, SpotifyPlayer, DraggablePlayer
-├── pages/               Route-level screens (home, search, playlist, library, liked, discover, profile)
-├── utils/               secureStorage (token storage), performance helpers
-└── data/                Demo data for unauthenticated mode
+├── services/
+│   ├── spotifyAuth.js      PKCE, callback validation, token refresh
+│   ├── spotifyApi.js       Axios client with token and 401-retry interceptors
+│   └── spotifyMappers.js   Spotify API → UI shapes (pure functions)
+├── features/               Redux Toolkit slices: auth (demo|spotify), library, player, ui
+├── hooks/                  useLibrary, usePlaylist, useMusicSearch
+├── pages/                  Landing, SpotifyCallback, Home, Search, Playlist, Library, Liked, Discover, Profile
+├── components/             layout, player, auth (ProtectedRoute), ui
+└── data/demoData.js        Data for demo mode
+```
+
+```
+Landing ──"Continue with Spotify"──▶ accounts.spotify.com (PKCE challenge)
+   │                                         │
+   └──"Try the demo"──▶ demo session         ▼
+                                     /callback: verify state → exchange code → /me
+                                             │
+                                             ▼
+                         loginSpotify → fetchSpotifyLibrary → /home
 ```
 
 **Key decisions**
 
 | Decision | Why |
 |---|---|
-| PKCE instead of the implicit grant | The implicit grant is deprecated. PKCE is the current recommendation for public clients that can't hold a secret. |
-| Redux Toolkit for player and auth | Several distant components (header, sidebar, footer player, pages) read and change the same playback state. |
-| Route-level pages plus shared layout | Keeps the player and navigation mounted across navigation, so audio isn't interrupted. |
+| PKCE instead of the implicit grant | The implicit grant is deprecated. PKCE is the current standard for public clients that can't keep a secret. |
+| Normalise API data into the demo shape | One rendering path for both modes, and the mapping logic is unit-tested without a browser. |
+| `Promise.allSettled` for the library | Spotify endpoints fail independently (scopes, empty history), so partial data beats an error screen. |
+| Redux for player, auth and library state | Header, sidebar, player and pages all read the same state. |
 
-## Tech stack
+## Testing
 
-React 18 · Vite · Redux Toolkit · React Router · Framer Motion · Axios · Spotify Web API
+```bash
+npm test        # Vitest + Testing Library
+npm run lint
+```
+
+There are 30 tests. They cover the PKCE challenge, state validation, token expiry and refresh (including concurrent refresh and failed refresh), the API mappers, the auth and library slices, and smoke renders of every page in both demo and Spotify mode. CI runs lint, tests and a production build on every push.
 
 ## Getting started
 
@@ -48,19 +66,20 @@ React 18 · Vite · Redux Toolkit · React Router · Framer Motion · Axios · S
 git clone https://github.com/itsjxi/vibe-music.git
 cd vibe-music
 npm install
-cp .env.example .env     # add your Spotify Client ID
-npm run dev
+npm run dev          # open http://127.0.0.1:5173
 ```
 
-You need a Spotify developer app, with `http://localhost:5173/callback` added as a Redirect URI. See [SPOTIFY_SETUP.md](./SPOTIFY_SETUP.md) and [SECURITY.md](./SECURITY.md).
+The demo works straight away. To enable Spotify sign-in, add your Client ID to `.env` (`cp .env.example .env`) and follow [SPOTIFY_SETUP.md](./SPOTIFY_SETUP.md).
+
+> Spotify apps start in development mode, so only accounts added in the developer dashboard can sign in. Everyone else gets the demo.
 
 | Variable | Description |
 |---|---|
-| `VITE_SPOTIFY_CLIENT_ID` | Client ID of your Spotify app |
-| `VITE_PROD_URL` | Deployed origin, used to build the redirect URI |
+| `VITE_SPOTIFY_CLIENT_ID` | Client ID of your Spotify app. If it's missing, only demo mode is offered |
+| `VITE_PROD_URL` | Deployed origin, used to build the production redirect URI |
 
 ## Roadmap
 
-- Remove the legacy `screens/` tree now that `pages/` replaces it
+- Full-track playback with the Web Playback SDK (Premium accounts)
+- Like and unlike, and playlist editing, through the API
 - Migrate data fetching to TanStack Query for caching and request deduplication
-- Add unit tests for the auth slice and the PKCE helpers

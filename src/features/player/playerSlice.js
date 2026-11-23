@@ -109,13 +109,11 @@ const playerSlice = createSlice({
         state.currentTrack = state.queue[state.currentIndex];
         state.currentTime = 0;
         state.duration = 0;
-        state.isPlaying = state.isPlaying;
       } else if (state.repeat === 'all') {
         state.currentIndex = state.queue.length - 1;
         state.currentTrack = state.queue[state.currentIndex];
         state.currentTime = 0;
         state.duration = 0;
-        state.isPlaying = state.isPlaying;
       }
     },
     

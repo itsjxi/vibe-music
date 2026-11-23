@@ -1,85 +1,42 @@
 import axios from 'axios';
-import SecureStorage from '../utils/secureStorage';
+import { getValidAccessToken, refreshAccessToken } from './spotifyAuth';
 
-const BASE_URL = 'https://api.spotify.com/v1';
+const spotifyApi = axios.create({ baseURL: 'https://api.spotify.com/v1' });
 
-// Get token from secure storage
-const getToken = () => {
-  return SecureStorage.getItem('access_token');
-};
-
-// Create axios instance with auth
-const spotifyApi = axios.create({
-  baseURL: BASE_URL,
-});
-
-// Add auth interceptor
-spotifyApi.interceptors.request.use((config) => {
-  const token = getToken();
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  } else {
-    // Redirect to login if no token
-    window.location.href = '/';
-    return Promise.reject(new Error('No access token'));
-  }
+// Attach a valid token, refreshing it first if it has expired
+spotifyApi.interceptors.request.use(async (config) => {
+  const token = await getValidAccessToken();
+  if (!token) throw new axios.Cancel('Not signed in to Spotify');
+  config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
 
-// Add response interceptor for token expiry
+// On 401, refresh once and retry the original request
 spotifyApi.interceptors.response.use(
   (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      // Token expired, clear storage and redirect to login
-      SecureStorage.removeItem('access_token');
-      SecureStorage.removeItem('token_expires');
-      SecureStorage.removeItem('user_data');
-      window.location.href = '/';
+  async (error) => {
+    const original = error.config;
+    if (error.response?.status === 401 && original && !original._retried) {
+      original._retried = true;
+      const token = await refreshAccessToken();
+      original.headers.Authorization = `Bearer ${token}`;
+      return spotifyApi(original);
     }
-    return Promise.reject(error);
-  }
+    throw error;
+  },
 );
 
-// API Methods
 export const spotifyService = {
-  // User Profile
   getCurrentUser: () => spotifyApi.get('/me'),
-  
-  // Playlists
   getUserPlaylists: (limit = 20) => spotifyApi.get('/me/playlists', { params: { limit } }),
-  getPlaylist: (playlistId) => spotifyApi.get(`/playlists/${playlistId}`),
-  getPlaylistTracks: (playlistId) => spotifyApi.get(`/playlists/${playlistId}/tracks`),
-  
-  // Browse
-  getFeaturedPlaylists: (limit = 20) => spotifyApi.get('/browse/featured-playlists', { params: { limit, country: 'US' } }),
-  getNewReleases: (limit = 20) => spotifyApi.get('/browse/new-releases', { params: { limit } }),
-  getCategories: (limit = 20) => spotifyApi.get('/browse/categories', { params: { limit } }),
-  
-  // Search
-  search: (query, type = 'track,artist,album,playlist', limit = 20) => 
-    spotifyApi.get('/search', { params: { q: query, type, limit } }),
-  
-  // Tracks
-  getTrack: (trackId) => spotifyApi.get(`/tracks/${trackId}`),
-  getTracks: (trackIds) => spotifyApi.get(`/tracks?ids=${trackIds.join(',')}`),
-  
-  // Albums
-  getAlbum: (albumId) => spotifyApi.get(`/albums/${albumId}`),
-  getAlbumTracks: (albumId) => spotifyApi.get(`/albums/${albumId}/tracks`),
-  
-  // Artists
-  getArtist: (artistId) => spotifyApi.get(`/artists/${artistId}`),
-  getArtistTopTracks: (artistId, country = 'US') => 
-    spotifyApi.get(`/artists/${artistId}/top-tracks?market=${country}`),
-  getArtistAlbums: (artistId) => spotifyApi.get(`/artists/${artistId}/albums`),
-  
-  // User Library
-  getSavedTracks: (limit = 20) => spotifyApi.get('/me/tracks', { params: { limit } }),
+  getPlaylist: (id) => spotifyApi.get(`/playlists/${id}`),
+  search: (q, type = 'track,artist,album,playlist', limit = 20) =>
+    spotifyApi.get('/search', { params: { q, type, limit } }),
+  getSavedTracks: (limit = 50) => spotifyApi.get('/me/tracks', { params: { limit } }),
   getRecentlyPlayed: (limit = 20) => spotifyApi.get('/me/player/recently-played', { params: { limit } }),
-  getTopTracks: (timeRange = 'medium_term', limit = 20) => 
+  getTopTracks: (timeRange = 'medium_term', limit = 20) =>
     spotifyApi.get('/me/top/tracks', { params: { time_range: timeRange, limit } }),
-  getTopArtists: (timeRange = 'medium_term', limit = 20) => 
+  getTopArtists: (timeRange = 'medium_term', limit = 20) =>
     spotifyApi.get('/me/top/artists', { params: { time_range: timeRange, limit } }),
 };
 

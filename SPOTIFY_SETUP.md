@@ -1,107 +1,40 @@
-# Spotify API Setup Guide
+# Spotify setup
 
-## 1. Create Spotify App
+Vibe Music uses the **Authorization Code flow with PKCE**, which is built for browser apps.
+You only need a **Client ID**. There is no client secret, and you should never put one in a frontend `.env`.
 
-1. Go to [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)
-2. Log in with your Spotify account
-3. Click "Create App"
-4. Fill in the details:
-   - **App Name**: Your Spotify Clone
-   - **App Description**: A Spotify clone built with React
-   - **Website**: http://localhost:5173 (for development)
-   - **Redirect URI**: http://localhost:5173/callback
+## 1. Create a Spotify app
 
-## 2. Get Your Credentials
+1. Open the [Spotify Developer Dashboard](https://developer.spotify.com/dashboard) and click **Create app**.
+2. Under **Redirect URIs**, add:
+   - `http://127.0.0.1:5173/callback` for local development (Spotify requires the loopback IP, not `localhost`)
+   - `https://<your-domain>/callback` for production
+3. Under **APIs used**, tick **Web API**.
+4. Copy the **Client ID**.
 
-1. After creating the app, click on it to open settings
-2. Copy your **Client ID**
-3. Click "Show Client Secret" and copy your **Client Secret**
+## 2. Configure the app
 
-## 3. Configure Environment Variables
+```bash
+cp .env.example .env
+```
 
-1. Copy `.env.example` to `.env`:
-   ```bash
-   cp .env.example .env
-   ```
+```
+VITE_SPOTIFY_CLIENT_ID=<your client id>
+VITE_PROD_URL=https://<your-domain>
+```
 
-2. Update `.env` with your credentials:
-   ```
-   VITE_SPOTIFY_CLIENT_ID=your_actual_client_id
-   VITE_SPOTIFY_CLIENT_SECRET=your_actual_client_secret
-   VITE_REDIRECT_URI=http://localhost:5173/callback
-   ```
+Run `npm run dev` and open **http://127.0.0.1:5173**, not `localhost`. The redirect URI has to match exactly.
 
-## 4. App Settings in Spotify Dashboard
+## 3. Development-mode access
 
-Make sure your Spotify app has these settings:
-
-### Redirect URIs:
-- Development: `http://localhost:5173/callback`
-- Production: `https://yourdomain.com/callback`
-
-### Scopes (automatically requested):
-- `user-read-private` - Read user profile
-- `user-read-email` - Read user email
-- `user-read-playback-state` - Read playback state
-- `user-modify-playback-state` - Control playback
-- `user-read-currently-playing` - Read currently playing
-- `playlist-read-private` - Read private playlists
-- `playlist-read-collaborative` - Read collaborative playlists
-- `playlist-modify-public` - Modify public playlists
-- `playlist-modify-private` - Modify private playlists
-- `user-library-read` - Read saved tracks
-- `user-library-modify` - Modify saved tracks
-- `user-top-read` - Read top tracks and artists
-- `user-read-recently-played` - Read recently played
-
-## 5. Test the Integration
-
-1. Start your development server:
-   ```bash
-   npm run dev
-   ```
-
-2. Go to `http://localhost:5173`
-3. Click "Connect with Spotify"
-4. You should be redirected to Spotify's authorization page
-5. After granting permissions, you'll be redirected back to your app
-
-## 6. Production Deployment
-
-When deploying to production:
-
-1. Update your Spotify app's redirect URI to your production domain
-2. Update `VITE_REDIRECT_URI` in your production environment variables
-3. Make sure your domain is added to the Spotify app settings
+New Spotify apps start in **development mode**. Only Spotify accounts you add under
+**User Management** in the dashboard can sign in. Everyone else can use **Try the demo**,
+which runs on bundled data without any Spotify account.
 
 ## Troubleshooting
 
-### Common Issues:
-
-1. **"Invalid redirect URI"**
-   - Make sure the redirect URI in your Spotify app matches exactly with `VITE_REDIRECT_URI`
-   - Check for trailing slashes and protocol (http vs https)
-
-2. **"Invalid client"**
-   - Verify your Client ID and Client Secret are correct
-   - Make sure there are no extra spaces in your environment variables
-
-3. **"Access denied"**
-   - Check that your app is not in development mode restrictions
-   - Verify the user has access to your Spotify app
-
-### Development Tips:
-
-- Use Spotify's Web Playback SDK for actual music playback
-- Implement token refresh logic for long-running sessions
-- Handle rate limiting (429 responses) from Spotify API
-- Cache user data to reduce API calls
-
-## Next Steps
-
-After successful authentication, you can:
-- Fetch user's playlists
-- Get user's saved tracks
-- Search for music
-- Control playback (requires Spotify Premium)
-- Create and modify playlists
+| Symptom | Fix |
+|---|---|
+| `INVALID_CLIENT: Invalid redirect URI` | The URI in the dashboard must match exactly, including `127.0.0.1` vs `localhost` and the trailing path |
+| Sign-in succeeds but the Home page is empty | The account has no listening history yet. Top tracks and recently played need some activity |
+| `403` after signing in | The account isn't in the app's User Management list (development mode) |

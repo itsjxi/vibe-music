@@ -1,14 +1,16 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { FiMusic, FiHeart, FiGrid, FiList, FiClock, FiPlay } from 'react-icons/fi';
 import { useDispatch } from 'react-redux';
 import { setCurrentTrack, setQueue } from '../../features/player/playerSlice';
-import { DEMO_PLAYLISTS, DEMO_RECENTLY_PLAYED, DEMO_LIKED_SONGS } from '../../data/demoData';
+import useLibrary from '../../hooks/useLibrary';
+import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import toast from 'react-hot-toast';
 import './LibraryPage.css';
 
 export default function LibraryPage() {
+  const { playlists: libPlaylists, recentlyPlayed: libRecent, likedSongs: libLiked, loading: libLoading } = useLibrary();
   const navigate  = useNavigate();
   const dispatch  = useDispatch();
   const [view,    setView]    = useState('grid');
@@ -21,11 +23,11 @@ export default function LibraryPage() {
       id: 'liked-songs',
       type: 'liked',
       name: 'Liked Songs',
-      sub: `${DEMO_LIKED_SONGS.length} songs`,
+      sub: `${libLiked.length} songs`,
       img: null,
       action: () => navigate('/liked'),
     },
-    ...DEMO_PLAYLISTS.map(pl => ({
+    ...libPlaylists.map(pl => ({
       id: pl.id,
       type: 'playlist',
       name: pl.name,
@@ -35,15 +37,15 @@ export default function LibraryPage() {
     })),
   ];
 
-  const recentItems = DEMO_RECENTLY_PLAYED.map(t => ({
+  const recentItems = libRecent.map(t => ({
     id: t.id,
     type: 'recent',
     name: t.name,
-    sub: t.artists[0].name,
+    sub: t.artists[0]?.name,
     img: t.album.images[0].url,
     action: () => {
       dispatch(setCurrentTrack(t));
-      dispatch(setQueue({ tracks: DEMO_RECENTLY_PLAYED, startIndex: DEMO_RECENTLY_PLAYED.findIndex(x => x.id === t.id) }));
+      dispatch(setQueue({ tracks: libRecent, startIndex: libRecent.findIndex(x => x.id === t.id) }));
       toast.success(`Playing: ${t.name}`);
     },
   }));
@@ -51,6 +53,8 @@ export default function LibraryPage() {
   const items = filter === 'recent' ? recentItems
     : filter === 'playlists' ? libraryItems.filter(i => i.type !== 'recent')
     : libraryItems;
+
+  if (libLoading) return <LoadingSpinner />;
 
   return (
     <div className="lib-root">
@@ -132,13 +136,13 @@ export default function LibraryPage() {
             </h2>
           </div>
           <div className="lib-recent-list">
-            {DEMO_RECENTLY_PLAYED.slice(0, 6).map((t, i) => (
+            {libRecent.slice(0, 6).map((t, i) => (
               <motion.div key={t.id} className="lib-recent-row"
                 initial={{ opacity:0, x:-10 }} animate={{ opacity:1, x:0 }}
                 transition={{ delay: i * 0.05 }}
                 onClick={() => {
                   dispatch(setCurrentTrack(t));
-                  dispatch(setQueue({ tracks: DEMO_RECENTLY_PLAYED, startIndex: i }));
+                  dispatch(setQueue({ tracks: libRecent, startIndex: i }));
                   toast.success(`Playing: ${t.name}`);
                 }}>
                 <div className="lib-recent-art">
@@ -147,7 +151,7 @@ export default function LibraryPage() {
                 </div>
                 <div className="lib-recent-meta">
                   <p className="lib-recent-name">{t.name}</p>
-                  <p className="lib-recent-artist label-sm">{t.artists[0].name}</p>
+                  <p className="lib-recent-artist label-sm">{t.artists[0]?.name}</p>
                 </div>
               </motion.div>
             ))}

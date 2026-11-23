@@ -111,7 +111,7 @@ class SecureStorage {
     let total = 0;
     try {
       for (let key in localStorage) {
-        if (localStorage.hasOwnProperty(key) && key.startsWith(STORAGE_PREFIX)) {
+        if (Object.prototype.hasOwnProperty.call(localStorage, key) && key.startsWith(STORAGE_PREFIX)) {
           total += localStorage[key].length + key.length;
         }
       }

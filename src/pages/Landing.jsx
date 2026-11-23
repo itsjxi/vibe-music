@@ -1,9 +1,11 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { FiPlay, FiHeadphones, FiRadio, FiZap } from 'react-icons/fi';
+import { FaSpotify } from 'react-icons/fa';
 import { loginDemo } from '../features/auth/authSlice';
+import { redirectToSpotifyAuth, isSpotifyConfigured } from '../services/spotifyAuth';
 import { DEMO_TRACKS } from '../data/demoData';
 import './Landing.css';
 
@@ -17,6 +19,8 @@ export default function Landing() {
   }, [isAuthenticated, navigate]);
 
   const enter = () => dispatch(loginDemo());
+  const connectSpotify = () => redirectToSpotifyAuth();
+  const spotifyEnabled = isSpotifyConfigured();
 
   const features = [
     { icon: FiHeadphones, label: 'Spatial Audio',  desc: 'Immersive 360° soundscapes' },
@@ -33,7 +37,9 @@ export default function Landing() {
           <div className="landing-brand-dot" />
           <span className="landing-brand-name">Kinetic</span>
         </div>
-        <button className="btn btn-primary" onClick={enter}>Open App</button>
+        <button className="btn btn-primary" onClick={spotifyEnabled ? connectSpotify : enter}>
+          {spotifyEnabled ? 'Log in' : 'Open App'}
+        </button>
       </motion.nav>
 
       {/* Hero */}
@@ -47,10 +53,14 @@ export default function Landing() {
             Precision audio. Editorial curation. A player designed with the care of a fine instrument.
           </p>
           <div className="landing-actions">
-            <button className="btn btn-primary landing-cta" onClick={enter}>
-              <FiPlay size={18} /> Start Listening
+            {spotifyEnabled && (
+              <button className="btn btn-primary landing-cta" onClick={connectSpotify}>
+                <FaSpotify size={18} /> Continue with Spotify
+              </button>
+            )}
+            <button className={`btn ${spotifyEnabled ? 'btn-secondary' : 'btn-primary landing-cta'}`} onClick={enter}>
+              <FiPlay size={18} /> Try the demo
             </button>
-            <button className="btn btn-secondary" onClick={enter}>Browse Library</button>
           </div>
         </div>
 

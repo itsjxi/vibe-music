@@ -22,14 +22,11 @@ const SCOPES = [
   'user-read-recently-played'
 ].join(' ');
 
-// Generate random string for state parameter
+// Cryptographically secure random string (used for the PKCE verifier and OAuth state)
 const generateRandomString = (length) => {
   const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  let text = '';
-  for (let i = 0; i < length; i++) {
-    text += possible.charAt(Math.floor(Math.random() * possible.length));
-  }
-  return text;
+  const values = window.crypto.getRandomValues(new Uint8Array(length));
+  return Array.from(values, (v) => possible[v % possible.length]).join('');
 };
 
 // Generate code verifier for PKCE
@@ -148,23 +145,66 @@ export const getSpotifyUserProfile = async (accessToken) => {
   return response.json();
 };
 
-// Check if token is valid
+// Is a Spotify client ID configured for this build?
+export const isSpotifyConfigured = () => Boolean(CLIENT_ID);
+
+// Check if the access token is still valid
 export const isTokenValid = () => {
   const token = SecureStorage.getItem('access_token');
   const expires = SecureStorage.getItem('token_expires');
-  
   if (!token || !expires) return false;
-  
-  return Date.now() < parseInt(expires);
+  // Treat tokens expiring in the next 60s as expired so requests never race the expiry
+  return Date.now() < parseInt(expires, 10) - 60_000;
 };
 
-// Get valid access token
-export const getValidAccessToken = () => {
-  if (isTokenValid()) {
-    return SecureStorage.getItem('access_token');
-  }
-  
-  SecureStorage.removeItem('access_token');
-  SecureStorage.removeItem('token_expires');
-  return null;
+// Refresh the access token with the stored refresh token (PKCE flow: no client secret).
+// Concurrent callers share one in-flight request.
+let refreshPromise = null;
+export const refreshAccessToken = () => {
+  if (refreshPromise) return refreshPromise;
+  const refreshToken = SecureStorage.getItem('refresh_token');
+  if (!refreshToken) return Promise.reject(new Error('No refresh token'));
+
+  refreshPromise = fetch('https://accounts.spotify.com/api/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      grant_type: 'refresh_token',
+      refresh_token: refreshToken,
+      client_id: CLIENT_ID,
+    }),
+  })
+    .then(async (response) => {
+      if (!response.ok) throw new Error('Token refresh failed');
+      const data = await response.json();
+      SecureStorage.setItem('access_token', data.access_token, data.expires_in * 1000);
+      SecureStorage.setItem('token_expires', Date.now() + data.expires_in * 1000);
+      // Spotify may rotate the refresh token
+      if (data.refresh_token) {
+        SecureStorage.setItem('refresh_token', data.refresh_token, 60 * 24 * 60 * 60 * 1000);
+      }
+      return data.access_token;
+    })
+    .finally(() => { refreshPromise = null; });
+
+  return refreshPromise;
 };
+
+// Return a valid access token, refreshing it if needed. Resolves to null when signed out.
+export const getValidAccessToken = async () => {
+  if (isTokenValid()) return SecureStorage.getItem('access_token');
+  try {
+    return await refreshAccessToken();
+  } catch {
+    clearSpotifySession();
+    return null;
+  }
+};
+
+export const clearSpotifySession = () => {
+  ['access_token', 'refresh_token', 'token_expires', 'auth_state', 'code_verifier']
+    .forEach((key) => SecureStorage.removeItem(key));
+};
+
+// Exported for tests
+export const __test__ = { generateCodeChallenge, generateRandomString };

@@ -1,10 +1,10 @@
-import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import { motion } from 'framer-motion';
 import { FiPlay, FiHeart, FiClock, FiArrowLeft } from 'react-icons/fi';
 import { setCurrentTrack, setQueue } from '../../features/player/playerSlice';
-import { DEMO_PLAYLISTS } from '../../data/demoData';
+import usePlaylist from '../../hooks/usePlaylist';
+import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import toast from 'react-hot-toast';
 import './PlaylistPage.css';
 
@@ -18,14 +18,21 @@ export default function PlaylistPage() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
-  const playlist = DEMO_PLAYLISTS.find(p => p.id === id) || DEMO_PLAYLISTS[0];
-  const tracks   = playlist.tracks.items.map(i => i.track).filter(Boolean);
+  const { playlist, loading } = usePlaylist(id);
+  const tracks = playlist?.tracks.items.map(i => i.track).filter(Boolean) ?? [];
 
   const play = (track, idx) => {
+    if (!track) return;
     dispatch(setCurrentTrack(track));
     dispatch(setQueue({ tracks, startIndex: idx }));
     toast.success(`Playing: ${track.name}`);
   };
+
+  if (!playlist) {
+    return loading ? <LoadingSpinner /> : (
+      <div className="pp-root"><p className="pp-empty">Playlist not found.</p></div>
+    );
+  }
 
   return (
     <div className="pp-root">

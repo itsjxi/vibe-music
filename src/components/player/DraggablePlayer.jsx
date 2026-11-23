@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -9,7 +9,7 @@ import {
 import {
   togglePlay, setPlaying, nextTrack, previousTrack,
   toggleShuffle, toggleRepeat, setVolume,
-  setCurrentTime, setDuration, setCurrentTrack,
+  setCurrentTime, setDuration,
 } from '../../features/player/playerSlice';
 import './DraggablePlayer.css';
 

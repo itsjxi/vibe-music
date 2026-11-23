@@ -367,3 +367,12 @@
   .reco-art-wrap { width: 96px; height: 96px; }
   .artist-avatar { width: 54px; height: 54px; }
 }
+
+/* Greeting + data source badge */
+.hp-greeting { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1.25rem; }
+.hp-source {
+  font-size: 0.72rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase;
+  padding: 3px 10px; border-radius: 999px; border: 1px solid currentColor; opacity: 0.8;
+}
+.hp-source-spotify { color: #1db954; }
+.hp-source-demo { color: #a78bfa; }

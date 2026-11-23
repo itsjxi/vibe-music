@@ -1,9 +1,9 @@
-import React from 'react';
 import { useDispatch } from 'react-redux';
 import { motion } from 'framer-motion';
 import { FiPlay, FiHeart, FiClock } from 'react-icons/fi';
 import { setCurrentTrack, setQueue } from '../../features/player/playerSlice';
-import { DEMO_LIKED_SONGS } from '../../data/demoData';
+import useLibrary from '../../hooks/useLibrary';
+import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import toast from 'react-hot-toast';
 import './LikedSongsPage.css';
 
@@ -13,14 +13,18 @@ const fmt = ms => {
 };
 
 export default function LikedSongsPage() {
+  const { likedSongs: libLiked, loading: libLoading } = useLibrary();
   const dispatch = useDispatch();
-  const tracks   = DEMO_LIKED_SONGS;
+  const tracks   = libLiked;
 
   const play = (track, idx) => {
+    if (!track) return;
     dispatch(setCurrentTrack(track));
     dispatch(setQueue({ tracks, startIndex: idx }));
     toast.success(`Playing: ${track.name}`);
   };
+
+  if (libLoading) return <LoadingSpinner />;
 
   return (
     <div className="ls-root">

@@ -1,34 +1,34 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { FiSearch, FiPlay, FiMusic, FiUser, FiDisc } from 'react-icons/fi';
 import { useDispatch } from 'react-redux';
 import { setCurrentTrack, setQueue } from '../../features/player/playerSlice';
-import { searchDemoData, DEMO_TRACKS } from '../../data/demoData';
+import useLibrary from '../../hooks/useLibrary';
+import useMusicSearch from '../../hooks/useMusicSearch';
 import toast from 'react-hot-toast';
 import './SearchPage.css';
 
 export default function SearchPage() {
+  const { tracks: libTracks } = useLibrary();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const [query,     setQuery]     = useState(searchParams.get('q') || '');
-  const [results,   setResults]   = useState(null);
   const [activeTab, setActiveTab] = useState('all');
 
-  useEffect(() => {
-    const q = searchParams.get('q') || '';
-    setQuery(q);
-    if (q.trim()) setResults(searchDemoData(q));
-    else          setResults(null);
-  }, [searchParams]);
+  const submitted = searchParams.get('q') || '';
+  const { results, loading: searching } = useMusicSearch(submitted);
+
+  useEffect(() => { setQuery(submitted); }, [submitted]);
 
   const handleSearch = e => {
     e.preventDefault();
     if (query.trim()) setSearchParams({ q: query.trim() });
   };
 
-  const play = (track, queue = DEMO_TRACKS) => {
+  const play = (track, queue = libTracks) => {
+    if (!track) return;
     dispatch(setCurrentTrack(track));
     dispatch(setQueue({ tracks: queue, startIndex: queue.findIndex(t => t.id === track.id) }));
     toast.success(`Playing: ${track.name}`);
@@ -64,6 +64,7 @@ export default function SearchPage() {
       </div>
 
       {/* Results */}
+      {searching && !results && <p className="search-status">Searching…</p>}
       {results ? (
         <>
           {/* Tabs */}
@@ -148,7 +149,7 @@ export default function SearchPage() {
           {results.tracks.items.length === 0 && results.artists.items.length === 0 && (
             <div className="sp-empty">
               <FiSearch size={48} />
-              <h3>No results for "{query}"</h3>
+              <h3>No results for “{query}”</h3>
               <p>Try different keywords</p>
             </div>
           )}

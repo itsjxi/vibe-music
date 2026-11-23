@@ -1,5 +1,5 @@
-import React, { Suspense, lazy, useEffect } from 'react';
-import { Provider, useSelector } from 'react-redux';
+import { Suspense, lazy, useEffect } from 'react';
+import { Provider, useDispatch, useSelector } from 'react-redux';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { store } from './store';
@@ -8,11 +8,15 @@ import Sidebar from './components/layout/Sidebar';
 import DraggablePlayer from './components/player/DraggablePlayer';
 import LoadingSpinner from './components/ui/LoadingSpinner';
 import ProtectedRoute from './components/auth/ProtectedRoute';
+import { fetchSpotifyLibrary } from './features/library/librarySlice';
+import { logout } from './features/auth/authSlice';
+import { getValidAccessToken } from './services/spotifyAuth';
 import './styles/globals.css';
 import './App.css';
 
 // Lazy load pages
 const Landing    = lazy(() => import('./pages/Landing'));
+const SpotifyCallback = lazy(() => import('./pages/SpotifyCallback'));
 const HomePage   = lazy(() => import('./pages/home/HomePage'));
 const SearchPage = lazy(() => import('./pages/search/SearchPage'));
 const PlaylistPage   = lazy(() => import('./pages/playlist/PlaylistPage'));
@@ -22,7 +26,18 @@ const ProfilePage    = lazy(() => import('./pages/profile/ProfilePage'));
 const DiscoverPage   = lazy(() => import('./pages/discover/DiscoverPage'));
 
 function AppContent() {
-  const { isAuthenticated } = useSelector((state) => state.auth);
+  const dispatch = useDispatch();
+  const { isAuthenticated, mode } = useSelector((state) => state.auth);
+  const libraryStatus = useSelector((state) => state.library.status);
+
+  // Returning Spotify user: make sure the session is still valid, then load their library
+  useEffect(() => {
+    if (mode !== 'spotify' || libraryStatus !== 'idle') return;
+    getValidAccessToken().then((token) => {
+      if (token) dispatch(fetchSpotifyLibrary());
+      else dispatch(logout());
+    });
+  }, [mode, libraryStatus, dispatch]);
 
   return (
     <Router>
@@ -36,7 +51,7 @@ function AppContent() {
             <Suspense fallback={<LoadingSpinner />}>
               <Routes>
                 <Route path="/"         element={<Landing />} />
-                <Route path="/callback" element={<Landing />} />
+                <Route path="/callback" element={<SpotifyCallback />} />
                 <Route path="/home"     element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
                 <Route path="/search"   element={<ProtectedRoute><SearchPage /></ProtectedRoute>} />
                 <Route path="/playlist/:id" element={<ProtectedRoute><PlaylistPage /></ProtectedRoute>} />

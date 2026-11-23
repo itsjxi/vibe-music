@@ -1,14 +1,16 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { motion } from 'framer-motion';
 import { FiUser, FiMail, FiEdit2, FiCheck, FiMusic, FiHeart, FiLogOut } from 'react-icons/fi';
 import { updateUser, logout } from '../../features/auth/authSlice';
 import { useNavigate } from 'react-router-dom';
-import { DEMO_LIKED_SONGS, DEMO_PLAYLISTS, DEMO_RECENTLY_PLAYED } from '../../data/demoData';
+import useLibrary from '../../hooks/useLibrary';
+import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import toast from 'react-hot-toast';
 import './ProfilePage.css';
 
 export default function ProfilePage() {
+  const { playlists: libPlaylists, recentlyPlayed: libRecent, likedSongs: libLiked, loading: libLoading } = useLibrary();
   const dispatch  = useDispatch();
   const navigate  = useNavigate();
   const { user }  = useSelector(s => s.auth);
@@ -24,10 +26,12 @@ export default function ProfilePage() {
   };
 
   const stats = [
-    { icon: FiMusic,  label: 'Playlists',     value: DEMO_PLAYLISTS.length },
-    { icon: FiHeart,  label: 'Liked Songs',   value: DEMO_LIKED_SONGS.length },
-    { icon: FiMusic,  label: 'Recent Plays',  value: DEMO_RECENTLY_PLAYED.length },
+    { icon: FiMusic,  label: 'Playlists',     value: libPlaylists.length },
+    { icon: FiHeart,  label: 'Liked Songs',   value: libLiked.length },
+    { icon: FiMusic,  label: 'Recent Plays',  value: libRecent.length },
   ];
+
+  if (libLoading) return <LoadingSpinner />;
 
   return (
     <div className="prof-root">
@@ -100,13 +104,13 @@ export default function ProfilePage() {
         initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.25 }}>
         <h2 className="prof-section-title title-md">Recently Played</h2>
         <div className="prof-recent-list">
-          {DEMO_RECENTLY_PLAYED.slice(0, 5).map((t, i) => (
+          {libRecent.slice(0, 5).map((t, i) => (
             <div key={t.id} className="prof-recent-row">
               <span className="prof-recent-idx label-sm">{i+1}</span>
               <img src={t.album.images[0].url} alt={t.name} className="prof-recent-art" />
               <div className="prof-recent-meta">
                 <p className="prof-recent-name">{t.name}</p>
-                <p className="prof-recent-artist label-sm">{t.artists[0].name}</p>
+                <p className="prof-recent-artist label-sm">{t.artists[0]?.name}</p>
               </div>
               <span className="prof-recent-genre label-sm">{t.genre}</span>
             </div>
