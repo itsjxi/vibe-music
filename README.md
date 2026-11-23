@@ -1,4 +1,4 @@
-# Vibe Music
+# Kinetic
 
 [![CI](https://github.com/itsjxi/vibe-music/actions/workflows/ci.yml/badge.svg)](https://github.com/itsjxi/vibe-music/actions/workflows/ci.yml)
 

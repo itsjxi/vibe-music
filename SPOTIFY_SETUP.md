@@ -1,6 +1,6 @@
 # Spotify setup
 
-Vibe Music uses the **Authorization Code flow with PKCE**, which is built for browser apps.
+Kinetic uses the **Authorization Code flow with PKCE**, which is built for browser apps.
 You only need a **Client ID**. There is no client secret, and you should never put one in a frontend `.env`.
 
 ## 1. Create a Spotify app

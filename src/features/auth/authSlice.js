@@ -5,7 +5,7 @@ import { clearSpotifySession } from '../../services/spotifyAuth';
 const DEMO_USER = {
   id: 'demo-user',
   displayName: 'Demo Listener',
-  email: 'demo@vibe.music',
+  email: 'demo@kinetic.music',
   images: [],
 };
 
