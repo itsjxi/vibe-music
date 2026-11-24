@@ -4,7 +4,7 @@
 
 A music app built on the Spotify Web API. Sign in with Spotify to browse **your own** playlists, liked songs, top tracks and artists, or try the demo mode, which runs on bundled data with no account needed.
 
-**Live demo:** https://vibes-stream.netlify.app
+**Live demo:** https://kinetic-music.netlify.app
 
 ---
 

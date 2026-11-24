@@ -1,4 +1,4 @@
-# Security & Performance Audit - Vibes Stream
+# Security & Performance Audit - Kinetic
 
 ## ✅ Security Fixes Implemented
 
@@ -64,7 +64,7 @@
 
 ### Spotify Dashboard:
 1. http://127.0.0.1:5173/callback (dev)
-2. https://vibes-stream.netlify.app/callback (prod)
+2. https://kinetic-music.netlify.app/callback (prod)
 
 ## 🚀 Performance Best Practices
 

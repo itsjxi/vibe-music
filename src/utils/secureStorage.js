@@ -1,7 +1,7 @@
 // Secure Storage Utility
 // Handles localStorage with error handling, expiration, and cleanup
 
-const STORAGE_PREFIX = 'vibes_';
+const STORAGE_PREFIX = 'kinetic_';
 const MAX_STORAGE_SIZE = 5 * 1024 * 1024; // 5MB limit
 
 class SecureStorage {

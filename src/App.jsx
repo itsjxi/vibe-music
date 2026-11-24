@@ -5,7 +5,7 @@ import { Toaster } from 'react-hot-toast';
 import { store } from './store';
 import Header from './components/layout/Header';
 import Sidebar from './components/layout/Sidebar';
-import DraggablePlayer from './components/player/DraggablePlayer';
+import KineticPlayer from './components/player/KineticPlayer';
 import LoadingSpinner from './components/ui/LoadingSpinner';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import { fetchSpotifyLibrary } from './features/library/librarySlice';
@@ -64,7 +64,7 @@ function AppContent() {
           </main>
         </div>
 
-        {isAuthenticated && <DraggablePlayer />}
+        {isAuthenticated && <KineticPlayer />}
 
         <Toaster
           position="top-right"

@@ -11,7 +11,7 @@ import {
   toggleShuffle, toggleRepeat, setVolume,
   setCurrentTime, setDuration,
 } from '../../features/player/playerSlice';
-import './DraggablePlayer.css';
+import './KineticPlayer.css';
 
 const fmt = s => {
   if (!s || isNaN(s)) return '0:00';

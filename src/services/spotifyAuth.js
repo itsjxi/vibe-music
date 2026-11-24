@@ -4,7 +4,8 @@ import SecureStorage from '../utils/secureStorage';
 const CLIENT_ID = import.meta.env.VITE_SPOTIFY_CLIENT_ID;
 const getRedirectUri = () => {
   const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-  const prodUrl = import.meta.env.VITE_PROD_URL || 'https://vibes-stream.netlify.app';
+  // Use the site's own origin so a renamed or preview deploy still gets a matching redirect URI.
+  const prodUrl = import.meta.env.VITE_PROD_URL || window.location.origin;
   return isDevelopment 
     ? 'http://127.0.0.1:5173/callback'
     : `${prodUrl}/callback`;

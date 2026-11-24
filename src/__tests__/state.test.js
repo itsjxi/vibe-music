@@ -34,11 +34,11 @@ describe('auth slice', () => {
   it('clears the session and Spotify tokens on logout', () => {
     const store = makeStore();
     store.dispatch(loginDemo());
-    localStorage.setItem('vibes_access_token', '{"value":"t"}');
+    localStorage.setItem('kinetic_access_token', '{"value":"t"}');
     store.dispatch(logout());
     expect(store.getState().auth).toMatchObject({ mode: null, isAuthenticated: false });
     expect(localStorage.getItem('aura_user')).toBeNull();
-    expect(localStorage.getItem('vibes_access_token')).toBeNull();
+    expect(localStorage.getItem('kinetic_access_token')).toBeNull();
   });
 });
 
